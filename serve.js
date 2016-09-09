@@ -59,6 +59,28 @@ function createServer(port, pubdir, content, opts) {
     console.info(msg);
     console.info('');
     console.info('\t' + httpsUrl);
+    Object.keys(opts.ifaces).forEach(function (iname) {
+      var iface = opts.ifaces[iname];
+
+      if (iface.ipv4.length) {
+        console.info('');
+        console.info(iname + ':');
+
+        httpsUrl = 'https://' + iface.ipv4[0].address;
+        if (443 !== p) {
+          httpsUrl += ':' + p;
+        }
+        console.info('\t' + httpsUrl);
+
+        httpsUrl = 'https://[' + iface.ipv6[0].address + ']';
+        if (443 !== p) {
+          httpsUrl += ':' + p;
+        }
+        if (iface.ipv6.length) {
+          console.info('\t' + httpsUrl);
+        }
+      }
+    });
     console.info('');
   });
 
@@ -83,14 +105,16 @@ function run() {
   var pubdir = path.resolve(argv.d || argv._[1] || process.cwd());
   var content = argv.c;
   var letsencryptHost = argv['letsencrypt-certs'];
+  var tls = require('tls');
 
   var cert = require('localhost.daplie.com-certificates');
   var opts = {
-    key: cert.key
+    ifaces: require('./local-ip.js').find()
+  , key: cert.key
   , cert: cert.cert
   //, ca: cert.ca
   , SNICallback: function (servername, cb) {
-      cb(null, require('tls').createSecureContext(opts));
+      cb(null, tls.createSecureContext(opts));
       return;
     }
   };
