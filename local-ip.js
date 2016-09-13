@@ -2,7 +2,10 @@
 
 var os = require('os');
 
-module.exports.find = function () {
+module.exports.find = function (opts) {
+  opts = opts || {};
+  opts.externals = opts.externals || [];
+
   var ifaceMap = os.networkInterfaces();
   var newMap = {};
 
@@ -10,7 +13,12 @@ module.exports.find = function () {
     var ifaces = ifaceMap[iname];
 
     ifaces = ifaces.filter(function (iface) {
-      return !iface.internal && !/^fe80/.test(iface.address) && !/^[0:]+$/.test(iface.mac);
+      return opts.externals.some(function (ip) {
+        if (ip.address === iface.address) {
+          ip.external = true;
+          return true;
+        }
+      }) || (!iface.internal && !/^fe80/.test(iface.address) && !/^[0:]+$/.test(iface.mac));
     });
 
     if (!ifaces.length) {

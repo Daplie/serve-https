@@ -1,124 +1,141 @@
 #!/usr/bin/env node
 'use strict';
 
+var PromiseA = global.Promise; // require('bluebird');
 var https = require('https');
 var http = require('http');
 var fs = require('fs');
 var path = require('path');
+var portFallback = 8443;
+var insecurePortFallback = 4080;
+
+function showError(err, port) {
+  if ('EACCES' === err.code) {
+    console.error(err);
+    console.warn("You do not have permission to use '" + port + "'.");
+    console.warn("You can probably fix that by running as Administrator or root.");
+  }
+  else if ('EADDRINUSE' === err.code) {
+    console.warn("Another server is already running on '" + port + "'.");
+    console.warn("You can probably fix that by rebooting your comupter (or stopping it if you know what it is).");
+  }
+}
 
 function createInsecureServer(port, pubdir, opts) {
-  var server = http.createServer();
+  return new PromiseA(function (resolve) {
+    var server = http.createServer();
 
-  server.on('error', function (err) {
-    console.error(err);
-    process.exit(1);
-  });
+    server.on('error', function (err) {
+      if (opts.errorInsecurePort || opts.manualInsecurePort) {
+        showError(err, port);
+        process.exit(1);
+        return;
+      }
 
-  server.on('request', require('redirect-https')({
-    port: port
-  }));
+      opts.errorInsecurePort = err.toString();
 
-  server.listen(opts.insecurePort, function () {
-    var msg = 'Serving ' + pubdir + ' at http://' + opts.servername;
-    var p = server.address().port;
-    if (80 !== p) {
-      msg += ':' + p;
-    }
-    console.info(msg);
+      return createInsecureServer(insecurePortFallback, pubdir, opts).then(resolve);
+    });
+
+    server.on('request', require('redirect-https')({
+      port: opts.port
+    }));
+
+    server.listen(port, function () {
+      opts.insecurePort = port;
+      resolve();
+    });
   });
 }
 
 function createServer(port, pubdir, content, opts) {
-  var server = https.createServer(opts);
-  var app = require('./app');
+  return new PromiseA(function (resolve) {
+    var server = https.createServer(opts);
+    var app = require('./app');
 
-  var directive = { public: pubdir, content: content, livereload: opts.livereload
-    , servername: opts.servername, expressApp: opts.expressApp };
-  var livereload = require('livereload');
-  var server2 = livereload.createServer({ https: opts });
+    var directive = { public: pubdir, content: content, livereload: opts.livereload
+      , servername: opts.servername, expressApp: opts.expressApp };
 
-  server2.watch(pubdir);
+    server.on('error', function (err) {
+      if (opts.errorPort || opts.manualPort) {
+        showError(err, port);
+        process.exit(1);
+        return;
+      }
 
-  if (opts.insecurePort) {
-    createInsecureServer(port, pubdir, opts);
-  }
+      opts.errorPort = err.toString();
 
-  server.on('error', function (err) {
-    console.error(err);
-    process.exit(1);
-  });
+      return createServer(portFallback, pubdir, content, opts).then(resolve);
+    });
 
-  server.listen(port, function () {
-    var msg = 'Serving ' + pubdir + ' at ';
-    var httpsUrl = 'https://' + opts.servername;
-    var p = server.address().port;
-    if (443 !== p) {
-      httpsUrl += ':' + p;
-    }
-    console.info('');
-    console.info(msg);
-    console.info('');
-    console.info('\t' + httpsUrl);
-    Object.keys(opts.ifaces).forEach(function (iname) {
-      var iface = opts.ifaces[iname];
+    server.listen(port, function () {
+      opts.port = port;
 
-      if (iface.ipv4.length) {
-        console.info('');
-        console.info(iname + ':');
+      var livereload = require('livereload');
+      var server2 = livereload.createServer({ https: opts });
 
-        httpsUrl = 'https://' + iface.ipv4[0].address;
-        if (443 !== p) {
-          httpsUrl += ':' + p;
-        }
-        console.info('\t' + httpsUrl);
+      server2.watch(pubdir);
 
-        httpsUrl = 'https://[' + iface.ipv6[0].address + ']';
-        if (443 !== p) {
-          httpsUrl += ':' + p;
-        }
-        if (iface.ipv6.length) {
-          console.info('\t' + httpsUrl);
-        }
+      if ('false' !== opts.insecurePort) {
+        return createInsecureServer(opts.insecurePort, pubdir, opts).then(resolve);
+      } else {
+        resolve();
       }
     });
-    console.info('');
-  });
 
-  if ('function' === typeof app) {
-    app = app(directive);
-  } else if ('function' === typeof app.create) {
-    app = app.create(directive);
-  }
+    if ('function' === typeof app) {
+      app = app(directive);
+    } else if ('function' === typeof app.create) {
+      app = app.create(directive);
+    }
 
-  return Promise.resolve(app).then(function (app) {
-    server.on('request', app);
+    server.on('request', function (req, res) {
+      if ('function' === typeof app) {
+        app(req, res);
+        return;
+      }
+
+      res.end('not ready');
+    });
+
+    return PromiseA.resolve(app).then(function (_app) {
+      app = _app;
+    });
   });
 }
 
 module.exports.createServer = createServer;
 
 function run() {
+  var defaultServername = 'localhost.daplie.com';
   var minimist = require('minimist');
   var argv = minimist(process.argv.slice(2));
-  var port = argv.p || argv.port || argv._[0] || 8443;
+  var port = argv.p || argv.port || argv._[0] || 443;
   var livereload = argv.livereload;
   var pubdir = path.resolve(argv.d || argv._[1] || process.cwd());
   var content = argv.c;
   var letsencryptHost = argv['letsencrypt-certs'];
   var tls = require('tls');
 
+  // letsencrypt
+  var email = argv.email;
+  var agreeTos = argv.agreeTos || argv['agree-tos'];
+
   var cert = require('localhost.daplie.com-certificates');
   var opts = {
-    ifaces: require('./local-ip.js').find()
-  , key: cert.key
+    key: cert.key
   , cert: cert.cert
   //, ca: cert.ca
-  , SNICallback: function (servername, cb) {
-      cb(null, tls.createSecureContext(opts));
-      return;
-    }
+
+  , email: email
+  , agreeTos: agreeTos
   };
   var peerCa;
+
+  opts.SNICallback = function (servername, cb) {
+    cb(null, tls.createSecureContext(opts));
+    return;
+  };
 
   if (letsencryptHost) {
     argv.key = argv.key || '/etc/letsencrypt/live/' + letsencryptHost + '/privkey.pem';
@@ -174,18 +191,120 @@ function run() {
     }
   }
 
-  opts.servername = 'localhost.daplie.com';
+  opts.servername = defaultServername;
   if (argv.servername) {
     opts.servername = argv.servername;
   }
-  opts.insecurePort = argv.i || argv['insecure-port'];
+  if (argv.p || argv.port || argv._[0]) {
+    opts.manualPort = true;
+  }
+  if (argv.i || argv['insecure-port']) {
+    opts.manualInsecurePort = true;
+  }
+  opts.insecurePort = argv.i || argv['insecure-port'] || 80;
   opts.livereload = livereload;
 
   if (argv['express-app']) {
     opts.expressApp = require(path.resolve(process.cwd(), argv['express-app']));
   }
 
-  createServer(port, pubdir, content, opts);
+  return createServer(port, pubdir, content, opts).then(function () {
+    var msg;
+    var p;
+    var httpsUrl;
+    var promise;
+
+    // Port
+    msg = 'Serving ' + pubdir + ' at ';
+    httpsUrl = 'https://' + opts.servername;
+    p = opts.port;
+    if (443 !== p) {
+      httpsUrl += ':' + p;
+    }
+    console.info('');
+    console.info(msg);
+    console.info('');
+    console.info('\t' + httpsUrl);
+
+    // Insecure Port
+    p = '';
+    if (80 !== p) {
+      p = ':' + opts.insecurePort;
+    }
+    msg = '\thttp://' + opts.servername + p + ' (redirecting to https)';
+    console.info(msg);
+    console.info('');
+
+    if (!(argv.servername && defaultServername !== argv.servername && !(argv.key && argv.cert))) {
+      // ifaces
+      opts.ifaces = require('./local-ip.js').find();
+      promise = PromiseA.resolve();
+    } else {
+      console.info("Attempting to resolve external connection for '" + argv.servername + "'");
+      try {
+        promise = require('./match-ips.js').match(argv.servername, opts);
+      } catch(e) {
+        console.warn("Upgrade to version 2.x to use automatic certificate issuance for '" + argv.servername + "'");
+        promise = PromiseA.resolve();
+      }
+    }
+
+    return promise.then(function (matchingIps) {
+      if (matchingIps) {
+        if (!matchingIps.length) {
+          console.log("Neither the attached nor external interfaces match '" + argv.servername + "'");
+        }
+        opts.matchingIps = matchingIps || [];
+      }
+
+      if (opts.matchingIps.length) {
+        console.info('');
+        console.info('External IPs:');
+        console.info('');
+        opts.matchingIps.forEach(function (ip) {
+          if ('IPv4' === ip.family) {
+            httpsUrl = 'https://' + ip.address;
+            if (443 !== opts.port) {
+              httpsUrl += ':' + opts.port;
+            }
+            console.info('\t' + httpsUrl);
+          }
+          else {
+            httpsUrl = 'https://[' + ip.address + ']';
+            if (443 !== opts.port) {
+              httpsUrl += ':' + opts.port;
+            }
+            console.info('\t' + httpsUrl);
+          }
+        });
+      }
+
+      Object.keys(opts.ifaces).forEach(function (iname) {
+        var iface = opts.ifaces[iname];
+
+        if (iface.ipv4.length) {
+          console.info('');
+          console.info(iname + ':');
+
+          httpsUrl = 'https://' + iface.ipv4[0].address;
+          if (443 !== opts.port) {
+            httpsUrl += ':' + opts.port;
+          }
+          console.info('\t' + httpsUrl);
+
+          httpsUrl = 'https://[' + iface.ipv6[0].address + ']';
+          if (443 !== opts.port) {
+            httpsUrl += ':' + opts.port;
+          }
+          if (iface.ipv6.length) {
+            console.info('\t' + httpsUrl);
+          }
+        }
+      });
+
+      console.info('');
+    });
+  });
 }
 
 if (require.main === module) {
