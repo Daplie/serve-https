@@ -2,11 +2,13 @@
 'use strict';
 
 var PromiseA = global.Promise; // require('bluebird');
-var https = require('https');
+var https = require('httpolyglot');
 var http = require('http');
 var fs = require('fs');
 var path = require('path');
 var DDNS = require('ddns-cli');
+var httpPort = 80;
+var httpsPort = 443;
 var portFallback = 8443;
 var insecurePortFallback = 4080;
 
@@ -139,7 +141,7 @@ function createServer(port, pubdir, content, opts) {
 
       server2.watch(pubdir);
 
-      if ('false' !== opts.insecurePort) {
+      if ('false' !== opts.insecurePort && httpPort !== opts.insecurePort) {
         return createInsecureServer(opts.insecurePort, pubdir, opts).then(resolve);
       } else {
         resolve();
@@ -154,6 +156,16 @@ function createServer(port, pubdir, content, opts) {
 
     server.on('request', function (req, res) {
       console.log('[' + req.method + '] ' + req.url);
+      if (!req.socket.encrypted) {
+        res.statusCode = 301;
+        res.setHeader(
+          'Location'
+        , 'https://' + (req.headers.host || 'localhost')
+          + (httpsPort === opts.port ? '' : ':' + opts.port)
+        );
+        res.end();
+        return;
+      }
 
       if ('function' === typeof app) {
         app(req, res);
@@ -175,7 +187,7 @@ function run() {
   var defaultServername = 'localhost.daplie.com';
   var minimist = require('minimist');
   var argv = minimist(process.argv.slice(2));
-  var port = argv.p || argv.port || argv._[0] || 443;
+  var port = parseInt(argv.p || argv.port || argv._[0], 10) || httpsPort;
   var livereload = argv.livereload;
   var pubdir = path.resolve(argv.d || argv._[1] || process.cwd());
   var content = argv.c;
@@ -267,7 +279,10 @@ function run() {
   if (argv.i || argv['insecure-port']) {
     opts.manualInsecurePort = true;
   }
-  opts.insecurePort = argv.i || argv['insecure-port'] || 80;
+  opts.insecurePort = parseInt(argv.i || argv['insecure-port'], 10)
+    || argv.i || argv['insecure-port']
+    || httpPort
+    ;
   opts.livereload = livereload;
 
   if (argv['express-app']) {
@@ -307,7 +322,7 @@ function run() {
     msg = 'Serving ' + pubdir + ' at ';
     httpsUrl = 'https://' + opts.servername;
     p = opts.port;
-    if (443 !== p) {
+    if (httpsPort !== p) {
       httpsUrl += ':' + p;
     }
     console.info('');
@@ -317,7 +332,7 @@ function run() {
 
     // Insecure Port
     p = '';
-    if (80 !== p) {
+    if (httpPort !== p) {
       p = ':' + opts.insecurePort;
     }
     msg = '\thttp://' + opts.servername + p + ' (redirecting to https)';
@@ -353,14 +368,14 @@ function run() {
         opts.matchingIps.forEach(function (ip) {
           if ('IPv4' === ip.family) {
             httpsUrl = 'https://' + ip.address;
-            if (443 !== opts.port) {
+            if (httpsPort !== opts.port) {
               httpsUrl += ':' + opts.port;
             }
             console.info('\t' + httpsUrl);
           }
           else {
             httpsUrl = 'https://[' + ip.address + ']';
-            if (443 !== opts.port) {
+            if (httpsPort !== opts.port) {
               httpsUrl += ':' + opts.port;
             }
             console.info('\t' + httpsUrl);
@@ -376,7 +391,7 @@ function run() {
           console.info(iname + ':');
 
           httpsUrl = 'https://' + iface.ipv4[0].address;
-          if (443 !== opts.port) {
+          if (httpsPort !== opts.port) {
             httpsUrl += ':' + opts.port;
           }
           console.info('\t' + httpsUrl);
