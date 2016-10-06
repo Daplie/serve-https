@@ -1,6 +1,6 @@
 {
   "name": "serve-https",
-  "version": "1.5.6",
+  "version": "2.0.0",
   "description": "Serves HTTPS using TLS (SSL) certs for localhost.daplie.com - great for testing and development.",
   "main": "serve.js",
   "scripts": {
@@ -38,8 +38,12 @@
   },
   "homepage": "https://github.com/Daplie/serve-https#readme",
   "dependencies": {
+    "bluebird": "^3.4.6",
     "finalhandler": "^0.4.0",
     "ipify": "^1.1.0",
+    "le-challenge-dns": "^2.0.1",
+    "le-challenge-fs": "^2.0.5",
+    "letsencrypt-express": "^2.0.2",
     "livereload": "^0.4.0",
     "localhost.daplie.com-certificates": "^1.2.0",
     "minimist": "^1.1.1",

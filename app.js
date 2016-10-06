@@ -21,7 +21,7 @@ module.exports = function (opts) {
     if (opts.livereload) {
       livereload = '<script src="//'
         + (res.getHeader('Host') || opts.servername).split(':')[0]
-        + ':35729/livereload.js?snipver=1"></script>';
+        + ':' + opts.lrPort + '/livereload.js?snipver=1"></script>';
       addLen = livereload.length;
     }
 
