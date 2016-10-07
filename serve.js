@@ -132,6 +132,7 @@ function run() {
 
   // letsencrypt
   var cert = require('localhost.daplie.com-certificates').merge({});
+  var secureContext;
 
   var opts = {
     agreeTos: argv.agreeTos || argv['agree-tos']
@@ -147,7 +148,10 @@ function run() {
   var peerCa;
 
   opts.httpsOptions.SNICallback = function (servername, cb) {
-    cb(null, tls.createSecureContext(opts.httpsOptions));
+    if (!secureContext) {
+      secureContext = tls.createSecureContext(opts.httpsOptions);
+    }
+    cb(null, secureContext);
     return;
   };
 
