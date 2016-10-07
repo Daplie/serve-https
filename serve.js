@@ -10,6 +10,7 @@ var path = require('path');
 var DDNS = require('ddns-cli');
 var httpPort = 80;
 var httpsPort = 443;
+var lrPort = 35729;
 var portFallback = 8443;
 var insecurePortFallback = 4080;
 
@@ -139,11 +140,19 @@ function createServer(port, pubdir, content, opts) {
     server.listen(port, function () {
       opts.port = port;
 
-      opts.lrPort = 35729;
-      var livereload = require('livereload');
-      var server2 = livereload.createServer({ https: opts.httpsOptions, port: opts.lrPort });
+      if (opts.livereload) {
+        opts.lrPort = opts.lrPort || lrPort;
+        var livereload = require('livereload');
+        var server2 = livereload.createServer({
+          https: opts.httpsOptions
+        , port: opts.lrPort
+        , exclusions: [ '.hg', '.git', '.svn', 'node_modules' ]
+        });
 
-      server2.watch(pubdir);
+        console.info("[livereload] watching " + pubdir);
+        console.warn("WARNING: If CPU usage spikes to 100% it's because too many files are being watched");
+        server2.watch(pubdir);
+      }
 
       if ('false' !== opts.insecurePort && httpPort !== opts.insecurePort) {
         return createInsecureServer(opts.insecurePort, pubdir, opts).then(resolve);
@@ -195,6 +204,7 @@ function run() {
 
   // letsencrypt
   var cert = require('localhost.daplie.com-certificates').merge({});
+  var secureContext;
 
   var opts = {
     agreeTos: argv.agreeTos || argv['agree-tos']
@@ -211,7 +221,10 @@ function run() {
   var p;
 
   opts.httpsOptions.SNICallback = function (servername, cb) {
-    cb(null, tls.createSecureContext(opts.httpsOptions));
+    if (!secureContext) {
+      secureContext = tls.createSecureContext(opts.httpsOptions);
+    }
+    cb(null, secureContext);
     return;
   };
 
