@@ -203,7 +203,7 @@ function run() {
   var tls = require('tls');
 
   // letsencrypt
-  var cert = require('localhost.daplie.com-certificates').merge({});
+  var httpsOptions = require('localhost.daplie.com-certificates').merge({});
   var secureContext;
 
   var opts = {
@@ -211,10 +211,10 @@ function run() {
   , debug: argv.debug
   , email: argv.email
   , httpsOptions: {
-      key: cert.key
-    , cert: cert.cert
-    //, ca: cert.ca
-    }
+      key: httpsOptions.key
+    , cert: httpsOptions.cert
+    //, ca: httpsOptions.ca
+  }
   , argv: argv
   };
   var peerCa;
