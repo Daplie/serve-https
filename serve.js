@@ -92,6 +92,9 @@ function createServer(port, pubdir, content, opts) {
 
     var directive = { public: pubdir, content: content, livereload: opts.livereload
       , servername: opts.servername, expressApp: opts.expressApp };
+    var redirectApp = require('redirect-https')({
+      port: port
+    });
 
     // returns an instance of node-letsencrypt with additional helper methods
     var webrootPath = require('os').tmpdir();
@@ -159,13 +162,7 @@ function createServer(port, pubdir, content, opts) {
     server.on('request', function (req, res) {
       console.log('[' + req.method + '] ' + req.url);
       if (!req.socket.encrypted) {
-        res.statusCode = 301;
-        res.setHeader(
-          'Location'
-        , 'https://' + (req.headers.host || 'localhost')
-          + (httpsPort === opts.port ? '' : ':' + opts.port)
-        );
-        res.end();
+        redirectApp(req, res);
         return;
       }
 
@@ -197,7 +194,8 @@ function run() {
   var tls = require('tls');
 
   // letsencrypt
-  var cert = require('localhost.daplie.com-certificates');
+  var cert = require('localhost.daplie.com-certificates').merge({});
+
   var opts = {
     agreeTos: argv.agreeTos || argv['agree-tos']
   , debug: argv.debug
