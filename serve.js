@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 
-var PromiseA = global.Promise; // require('bluebird');
+//var PromiseA = global.Promise;
+var PromiseA = require('bluebird');
 var https = require('httpolyglot');
 var http = require('http');
 var fs = require('fs');
@@ -309,11 +310,11 @@ function run() {
           }
           console.info('\t' + httpsUrl);
 
-          httpsUrl = 'https://[' + iface.ipv6[0].address + ']';
-          if (httpsPort !== opts.port) {
-            httpsUrl += ':' + opts.port;
-          }
           if (iface.ipv6.length) {
+            httpsUrl = 'https://[' + iface.ipv6[0].address + ']';
+            if (httpsPort !== opts.port) {
+              httpsUrl += ':' + opts.port;
+            }
             console.info('\t' + httpsUrl);
           }
         }
