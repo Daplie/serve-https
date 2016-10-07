@@ -23,12 +23,11 @@ Serving /Users/foo/ at https://localhost.daplie.com:8443
 Usage
 -----
 
-* `-p <port>` - i.e. `sudo serve-https -p 443` (defaults to 8443)
+* `-p <port>` - i.e. `sudo serve-https -p 443` (defaults to 80+443 or 8443)
 * `-d <dirpath>` - i.e. `serve-https -d /tmp/` (defaults to `pwd`)
 * `-c <content>` - i.e. `server-https -c 'Hello, World! '` (defaults to directory index)
 * `--express-app` - path to a file the exports an express-style app (`function (req, res, next) { ... }`)
-* `--livereload` - inject livereload into all html pages (see also: [fswatch](http://stackoverflow.com/a/13807906/151312))
-* `--insecure-port <port>` - run an http server that redirects to https (off by default)
+* `--livereload` - inject livereload into all html pages (see also: [fswatch](http://stackoverflow.com/a/13807906/151312)), but be careful if `<dirpath>` has thousands of files it will spike your CPU usage to 100%
 
 Specifying a custom HTTPS certificate:
 
@@ -54,7 +53,7 @@ Examples
 ```bash
 serve-https -p 1443 -c 'Hello from 1443' &
 serve-https -p 2443 -c 'Hello from 2443' &
-serve-https -p 3443 -d /tmp --insecure-port 4080 &
+serve-https -p 3443 -d /tmp &
 
 curl https://localhost.daplie.com:1443
 > Hello from 1443
@@ -66,8 +65,8 @@ curl https://localhost.daplie.com:3443
 > [html index listing of /tmp]
 ```
 
-And if you tested <http://localhost.daplie.com:4080> in a browser,
-it would redirect to <https://localhost.daplie.com:3443>.
+And if you tested <http://localhost.daplie.com:3443> in a browser,
+it would redirect to <https://localhost.daplie.com:3443> (on the same port).
 
 (in curl it would just show an error message)
 
