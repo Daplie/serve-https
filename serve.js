@@ -77,8 +77,9 @@ function createServer(port, pubdir, content, opts) {
     server.listen(port, function () {
       opts.port = port;
 
+      opts.lrPort = 35729;
       var livereload = require('livereload');
-      var server2 = livereload.createServer({ https: opts });
+      var server2 = livereload.createServer({ https: opts.httpsOptions, port: opts.lrPort });
 
       server2.watch(pubdir);
 
@@ -130,22 +131,23 @@ function run() {
   var tls = require('tls');
 
   // letsencrypt
-  var email = argv.email;
-  var agreeTos = argv.agreeTos || argv['agree-tos'];
-
   var cert = require('localhost.daplie.com-certificates').merge({});
-  var opts = {
-    key: cert.key
-  , cert: cert.cert
-  //, ca: cert.ca
 
-  , email: email
-  , agreeTos: agreeTos
+  var opts = {
+    agreeTos: argv.agreeTos || argv['agree-tos']
+  , debug: argv.debug
+  , email: argv.email
+  , httpsOptions: {
+      key: cert.key
+    , cert: cert.cert
+    //, ca: cert.ca
+  }
+  , argv: argv
   };
   var peerCa;
 
-  opts.SNICallback = function (servername, cb) {
-    cb(null, tls.createSecureContext(opts));
+  opts.httpsOptions.SNICallback = function (servername, cb) {
+    cb(null, tls.createSecureContext(opts.httpsOptions));
     return;
   };
 
@@ -173,8 +175,8 @@ function run() {
       argv.root = [argv.root];
     }
 
-    opts.key = fs.readFileSync(argv.key);
-    opts.cert = fs.readFileSync(argv.cert);
+    opts.httpsOptions.key = fs.readFileSync(argv.key);
+    opts.httpsOptions.cert = fs.readFileSync(argv.cert);
 
     // turn multiple-cert pemfile into array of cert strings
     peerCa = argv.root.reduce(function (roots, fullpath) {
@@ -193,9 +195,9 @@ function run() {
 
     // TODO * `--verify /path/to/root.pem` require peers to present certificates from said authority
     if (argv.verify) {
-      opts.ca = peerCa;
-      opts.requestCert = true;
-      opts.rejectUnauthorized = true;
+      opts.httpsOptions.ca = peerCa;
+      opts.httpsOptions.requestCert = true;
+      opts.httpsOptions.rejectUnauthorized = true;
     }
 
     if (argv['serve-root']) {
