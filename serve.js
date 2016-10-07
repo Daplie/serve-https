@@ -58,6 +58,9 @@ function createServer(port, pubdir, content, opts) {
 
     var directive = { public: pubdir, content: content, livereload: opts.livereload
       , servername: opts.servername, expressApp: opts.expressApp };
+    var redirectApp = require('redirect-https')({
+      port: port
+    });
 
     server.on('error', function (err) {
       if (opts.errorPort || opts.manualPort) {
@@ -95,13 +98,7 @@ function createServer(port, pubdir, content, opts) {
 
     server.on('request', function (req, res) {
       if (!req.socket.encrypted) {
-        res.statusCode = 301;
-        res.setHeader(
-          'Location'
-        , 'https://' + (req.headers.host || 'localhost')
-          + (httpsPort === opts.port ? '' : ':' + opts.port)
-        );
-        res.end();
+        redirectApp(req, res);
         return;
       }
 
@@ -270,7 +267,7 @@ function run() {
     return promise.then(function (matchingIps) {
       if (matchingIps) {
         if (!matchingIps.length) {
-          console.log("Neither the attached nor external interfaces match '" + argv.servername + "'");
+          console.info("Neither the attached nor external interfaces match '" + argv.servername + "'");
         }
       }
       opts.matchingIps = matchingIps || [];
