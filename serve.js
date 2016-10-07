@@ -136,7 +136,7 @@ function run() {
   var email = argv.email;
   var agreeTos = argv.agreeTos || argv['agree-tos'];
 
-  var cert = require('localhost.daplie.com-certificates');
+  var cert = require('localhost.daplie.com-certificates').merge({});
   var opts = {
     key: cert.key
   , cert: cert.cert
