@@ -278,6 +278,9 @@ function run() {
   if (argv.p || argv.port || argv._[0]) {
     opts.manualPort = true;
   }
+  if (argv.t || argv.tunnel) {
+    opts.tunnel = true;
+  }
   if (argv.i || argv['insecure-port']) {
     opts.manualInsecurePort = true;
   }
