@@ -41,7 +41,7 @@
     "finalhandler": "^0.4.0",
     "httpolyglot": "^0.1.1",
     "ipify": "^1.1.0",
-    "livereload": "^0.4.0",
+    "livereload": "^0.5.0",
     "localhost.daplie.com-certificates": "^1.2.0",
     "minimist": "^1.1.1",
     "redirect-https": "^1.1.0",
