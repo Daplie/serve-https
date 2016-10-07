@@ -139,6 +139,14 @@ function run() {
   var letsencryptHost = argv['letsencrypt-certs'];
   var tls = require('tls');
 
+  if (argv.V || argv.version || argv.v) {
+    if (argv.v) {
+      console.warn("flag -v is reserved for future use. Use -V or --version for version information.");
+    }
+    console.info('v' + require('./package.json').version);
+    return;
+  }
+
   // letsencrypt
   var httpsOptions = require('localhost.daplie.com-certificates').merge({});
   var secureContext;
