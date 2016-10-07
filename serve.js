@@ -151,7 +151,7 @@ function run() {
       key: httpsOptions.key
     , cert: httpsOptions.cert
     //, ca: httpsOptions.ca
-  }
+    }
   , argv: argv
   };
   var peerCa;
