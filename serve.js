@@ -54,7 +54,7 @@ function createInsecureServer(port, pubdir, opts) {
 
 function createServer(port, pubdir, content, opts) {
   return new PromiseA(function (resolve) {
-    var server = https.createServer(opts);
+    var server = https.createServer(opts.httpsOptions);
     var app = require('./app');
 
     var directive = { public: pubdir, content: content, livereload: opts.livereload
@@ -140,7 +140,7 @@ function run() {
   var tls = require('tls');
 
   // letsencrypt
-  var cert = require('localhost.daplie.com-certificates').merge({});
+  var httpsOptions = require('localhost.daplie.com-certificates').merge({});
   var secureContext;
 
   var opts = {
@@ -148,9 +148,9 @@ function run() {
   , debug: argv.debug
   , email: argv.email
   , httpsOptions: {
-      key: cert.key
-    , cert: cert.cert
-    //, ca: cert.ca
+      key: httpsOptions.key
+    , cert: httpsOptions.cert
+    //, ca: httpsOptions.ca
   }
   , argv: argv
   };
