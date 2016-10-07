@@ -81,6 +81,7 @@ function createServer(port, pubdir, content, opts) {
       if ('false' !== opts.insecurePort && httpPort !== opts.insecurePort) {
         return createInsecureServer(opts.insecurePort, pubdir, opts).then(resolve);
       } else {
+        opts.insecurePort = opts.port;
         resolve();
       }
     });
@@ -270,8 +271,8 @@ function run() {
         if (!matchingIps.length) {
           console.log("Neither the attached nor external interfaces match '" + argv.servername + "'");
         }
-        opts.matchingIps = matchingIps || [];
       }
+      opts.matchingIps = matchingIps || [];
 
       if (opts.matchingIps.length) {
         console.info('');
