@@ -27,8 +27,12 @@ function showError(err, port) {
 }
 
 function createInsecureServer(port, pubdir, opts) {
-  return new PromiseA(function (resolve) {
+  return new PromiseA(function (realResolve) {
     var server = http.createServer();
+
+    function resolve() {
+      realResolve(server);
+    }
 
     server.on('error', function (err) {
       if (opts.errorInsecurePort || opts.manualInsecurePort) {
@@ -42,9 +46,7 @@ function createInsecureServer(port, pubdir, opts) {
       return createInsecureServer(insecurePortFallback, pubdir, opts).then(resolve);
     });
 
-    server.on('request', require('redirect-https')({
-      port: opts.port
-    }));
+    server.on('request', opts.redirectApp);
 
     server.listen(port, function () {
       opts.insecurePort = port;
@@ -88,14 +90,19 @@ function createServer(port, pubdir, content, opts) {
     cb(null, { options: params, certs: certs });
   }
 
-  return new PromiseA(function (resolve) {
+  return new PromiseA(function (realResolve) {
     var app = require('./app');
 
     var directive = { public: pubdir, content: content, livereload: opts.livereload
       , servername: opts.servername, expressApp: opts.expressApp };
-    var redirectApp = require('redirect-https')({
-      port: port
-    });
+    var insecureServer;
+
+    function resolve() {
+      realResolve({
+        plainServer: insecureServer
+      , server: server
+      });
+    }
 
     // returns an instance of node-letsencrypt with additional helper methods
     var webrootPath = require('os').tmpdir();
@@ -139,6 +146,7 @@ function createServer(port, pubdir, content, opts) {
 
     server.listen(port, function () {
       opts.port = port;
+      opts.redirectOptions.port = port;
 
       if (opts.livereload) {
         opts.lrPort = opts.lrPort || lrPort;
@@ -155,7 +163,10 @@ function createServer(port, pubdir, content, opts) {
       }
 
       if ('false' !== opts.insecurePort && httpPort !== opts.insecurePort) {
-        return createInsecureServer(opts.insecurePort, pubdir, opts).then(resolve);
+        return createInsecureServer(opts.insecurePort, pubdir, opts).then(function (_server) {
+          insecureServer = _server;
+          resolve();
+        });
       } else {
         opts.insecurePort = opts.port;
         resolve();
@@ -171,7 +182,7 @@ function createServer(port, pubdir, content, opts) {
     server.on('request', function (req, res) {
       console.log('[' + req.method + '] ' + req.url);
       if (!req.socket.encrypted) {
-        redirectApp(req, res);
+        opts.redirectApp(req, res);
         return;
       }
 
@@ -201,6 +212,14 @@ function run() {
   var content = argv.c;
   var letsencryptHost = argv['letsencrypt-certs'];
   var tls = require('tls');
+
+  if (argv.V || argv.version || argv.v) {
+    if (argv.v) {
+      console.warn("flag -v is reserved for future use. Use -V or --version for version information.");
+    }
+    console.info('v' + require('./package.json').version);
+    return;
+  }
 
   // letsencrypt
   var httpsOptions = require('localhost.daplie.com-certificates').merge({});
@@ -328,6 +347,13 @@ function run() {
   }
 
   return p.then(function () {
+
+  // can be changed to tunnel external port
+  opts.redirectOptions = {
+    port: opts.port
+  };
+  opts.redirectApp = require('redirect-https')(opts.redirectOptions);
+
   return createServer(port, pubdir, content, opts).then(function () {
     var msg;
     var p;
