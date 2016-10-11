@@ -3,6 +3,7 @@
 
 //var PromiseA = global.Promise;
 var PromiseA = require('bluebird');
+var tls = require('tls');
 var https = require('httpolyglot');
 var http = require('http');
 var fs = require('fs');
@@ -148,7 +149,6 @@ function run() {
   var pubdir = path.resolve(argv.d || argv._[1] || process.cwd());
   var content = argv.c;
   var letsencryptHost = argv['letsencrypt-certs'];
-  var tls = require('tls');
 
   if (argv.V || argv.version || argv.v) {
     if (argv.v) {
