@@ -181,7 +181,7 @@ function createServer(port, pubdir, content, opts) {
 
     server.on('request', function (req, res) {
       console.log('[' + req.method + '] ' + req.url);
-      if (!req.socket.encrypted) {
+      if (!req.socket.encrypted && !/\/\.well-known\/acme-challenge\//.test(req.url)) {
         opts.redirectApp(req, res);
         return;
       }
@@ -423,6 +423,9 @@ function run() {
             console.info('\t' + httpsUrl);
           }
         });
+      }
+      else {
+        require('./lib/tunnel.js').create(opts);
       }
 
       Object.keys(opts.ifaces).forEach(function (iname) {
