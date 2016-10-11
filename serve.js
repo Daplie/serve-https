@@ -3,6 +3,7 @@
 
 //var PromiseA = global.Promise;
 var PromiseA = require('bluebird');
+var tls = require('tls');
 var https = require('httpolyglot');
 var http = require('http');
 var fs = require('fs');
@@ -107,6 +108,7 @@ function createServer(port, pubdir, content, opts) {
     // returns an instance of node-letsencrypt with additional helper methods
     var webrootPath = require('os').tmpdir();
     var leChallengeFs = require('le-challenge-fs').create({ webrootPath: webrootPath });
+    //var leChallengeSni = require('le-challenge-sni').create({ webrootPath: webrootPath });
     var leChallengeDns = require('le-challenge-dns').create({ ttl: 1 });
     var lex = require('letsencrypt-express').create({
       // set to https://acme-v01.api.letsencrypt.org/directory in production
@@ -116,10 +118,10 @@ function createServer(port, pubdir, content, opts) {
     //
     , challenges: {
         'http-01': leChallengeFs
-      , 'tls-sni-01': leChallengeFs
+      , 'tls-sni-01': leChallengeFs // leChallengeSni
       , 'dns-01': leChallengeDns
       }
-    , challengeType: 'dns-01'
+    , challengeType: (opts.tunnel ? 'http-01' : 'dns-01')
     , store: require('le-store-certbot').create({ webrootPath: webrootPath })
     , webrootPath: webrootPath
 
@@ -129,7 +131,20 @@ function createServer(port, pubdir, content, opts) {
 
     , approveDomains: approveDomains
     });
-    opts.httpsOptions.SNICallback = lex.httpsOptions.SNICallback;
+    var secureContext;
+    opts.httpsOptions.SNICallback = function (servername, cb ) {
+      console.log('[https] servername', servername);
+
+      if ('localhost.daplie.com' === servername) {
+        if (!secureContext) {
+          secureContext = tls.createSecureContext(opts.httpsOptions);
+        }
+        cb(null, secureContext);
+        return;
+      }
+
+      lex.httpsOptions.SNICallback(servername, cb);
+    };
     var server = https.createServer(opts.httpsOptions);
 
     server.on('error', function (err) {
@@ -211,7 +226,6 @@ function run() {
   var pubdir = path.resolve(argv.d || argv._[1] || process.cwd());
   var content = argv.c;
   var letsencryptHost = argv['letsencrypt-certs'];
-  var tls = require('tls');
 
   if (argv.V || argv.version || argv.v) {
     if (argv.v) {
@@ -239,6 +253,7 @@ function run() {
   var peerCa;
   var p;
 
+  opts.PromiseA = PromiseA;
   opts.httpsOptions.SNICallback = function (servername, cb) {
     if (!secureContext) {
       secureContext = tls.createSecureContext(opts.httpsOptions);
@@ -354,7 +369,7 @@ function run() {
   };
   opts.redirectApp = require('redirect-https')(opts.redirectOptions);
 
-  return createServer(port, pubdir, content, opts).then(function () {
+  return createServer(port, pubdir, content, opts).then(function (servers) {
     var msg;
     var p;
     var httpsUrl;
@@ -424,8 +439,13 @@ function run() {
           }
         });
       }
-      else {
-        require('./lib/tunnel.js').create(opts);
+      else if (!opts.tunnel) {
+        console.info("External IP address does not match local IP address.");
+        console.info("Use --tunnel to allow the people of the Internet to access your server.");
+      }
+
+      if (opts.tunnel) {
+        require('./lib/tunnel.js').create(opts, servers);
       }
 
       Object.keys(opts.ifaces).forEach(function (iname) {
