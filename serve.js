@@ -92,7 +92,7 @@ function createServer(port, pubdir, content, opts) {
   }
 
   return new PromiseA(function (realResolve) {
-    var app = require('./app');
+    var app = require('./lib/app.js');
 
     var directive = { public: pubdir, content: content, livereload: opts.livereload
       , servername: opts.servername, expressApp: opts.expressApp };
