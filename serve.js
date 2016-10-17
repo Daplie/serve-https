@@ -169,7 +169,7 @@ function createServer(port, pubdir, content, opts) {
         var server2 = livereload.createServer({
           https: opts.httpsOptions
         , port: opts.lrPort
-        , exclusions: [ '.hg', '.git', '.svn', 'node_modules' ]
+        , exclusions: [ 'node_modules' ]
         });
 
         console.info("[livereload] watching " + pubdir);
@@ -446,6 +446,9 @@ function run() {
 
       if (opts.tunnel) {
         require('./lib/tunnel.js').create(opts, servers);
+      }
+      else if (opts.ddns) {
+        require('./lib/ddns.js').create(opts, servers);
       }
 
       Object.keys(opts.ifaces).forEach(function (iname) {

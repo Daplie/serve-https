@@ -45,7 +45,7 @@
     "le-challenge-dns": "^2.0.1",
     "le-challenge-fs": "^2.0.5",
     "letsencrypt-express": "^2.0.2",
-    "livereload": "^0.5.0",
+    "livereload": "^0.6.0",
     "localhost.daplie.com-certificates": "^1.2.0",
     "minimist": "^1.1.1",
     "redirect-https": "^1.1.0",
