@@ -23,6 +23,12 @@ Serving /Users/foo/ at https://localhost.daplie.com:8443
 Usage
 -----
 
+Examples:
+
+```
+node serve.js --servername jane.daplie.me --agree-tos --email jane@example.com --tunnel
+```
+
 * `-p <port>` - i.e. `sudo serve-https -p 443` (defaults to 80+443 or 8443)
 * `-d <dirpath>` - i.e. `serve-https -d /tmp/` (defaults to `pwd`)
 * `-c <content>` - i.e. `server-https -c 'Hello, World! '` (defaults to directory index)
