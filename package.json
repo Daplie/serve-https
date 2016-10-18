@@ -39,17 +39,21 @@
   "homepage": "https://github.com/Daplie/serve-https#readme",
   "dependencies": {
     "bluebird": "^3.4.6",
+    "ddns-cli": "git+https://github.com:Daplie/node-ddns-client.git#master",
+    "daplie-tunnel": "git+https://github.com:Daplie/daplie-cli-tunnel.git#master",
     "finalhandler": "^0.4.0",
     "httpolyglot": "^0.1.1",
     "ipify": "^1.1.0",
-    "le-challenge-dns": "^2.0.1",
+    "le-challenge-ddns": "^2.0.1",
     "le-challenge-fs": "^2.0.5",
     "letsencrypt-express": "^2.0.2",
     "livereload": "^0.6.0",
     "localhost.daplie.com-certificates": "^1.2.0",
     "minimist": "^1.1.1",
+    "oauth3-cli": "git+https://github.com:OAuth3/oauth3-cli.git#master",
     "redirect-https": "^1.1.0",
     "serve-index": "^1.7.0",
-    "serve-static": "^1.10.0"
+    "serve-static": "^1.10.0",
+    "stunnel": "git+https://github.com:Daplie/node-tunnel-client.git#master"
   }
 }
