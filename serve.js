@@ -109,7 +109,7 @@ function createServer(port, pubdir, content, opts) {
     var webrootPath = require('os').tmpdir();
     var leChallengeFs = require('le-challenge-fs').create({ webrootPath: webrootPath });
     //var leChallengeSni = require('le-challenge-sni').create({ webrootPath: webrootPath });
-    var leChallengeDns = require('le-challenge-dns').create({ ttl: 1 });
+    var leChallengeDdns = require('le-challenge-ddns').create({ ttl: 1 });
     var lex = require('letsencrypt-express').create({
       // set to https://acme-v01.api.letsencrypt.org/directory in production
       server: opts.debug ? 'staging' : 'https://acme-v01.api.letsencrypt.org/directory'
@@ -119,7 +119,7 @@ function createServer(port, pubdir, content, opts) {
     , challenges: {
         'http-01': leChallengeFs
       , 'tls-sni-01': leChallengeFs // leChallengeSni
-      , 'dns-01': leChallengeDns
+      , 'dns-01': leChallengeDdns
       }
     , challengeType: (opts.tunnel ? 'http-01' : 'dns-01')
     , store: require('le-store-certbot').create({ webrootPath: webrootPath })
@@ -242,6 +242,7 @@ function run() {
   var opts = {
     agreeTos: argv.agreeTos || argv['agree-tos']
   , debug: argv.debug
+  , device: argv.device
   , email: argv.email
   , httpsOptions: {
       key: httpsOptions.key
