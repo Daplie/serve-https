@@ -23,11 +23,24 @@ Serving /Users/foo/ at https://localhost.daplie.com:8443
 Usage
 -----
 
+Examples:
+
+```
+node serve.js --servername jane.daplie.me --agree-tos --email jane@example.com --tunnel
+```
+
+Options:
+
 * `-p <port>` - i.e. `sudo serve-https -p 443` (defaults to 80+443 or 8443)
 * `-d <dirpath>` - i.e. `serve-https -d /tmp/` (defaults to `pwd`)
 * `-c <content>` - i.e. `server-https -c 'Hello, World! '` (defaults to directory index)
-* `--express-app` - path to a file the exports an express-style app (`function (req, res, next) { ... }`)
+* `--express-app <path>` - path to a file the exports an express-style app (`function (req, res, next) { ... }`)
 * `--livereload` - inject livereload into all html pages (see also: [fswatch](http://stackoverflow.com/a/13807906/151312)), but be careful if `<dirpath>` has thousands of files it will spike your CPU usage to 100%
+
+* `--email <email>` - email to use for Let's Encrypt, Daplie DNS, Daplie Tunnel
+* `--agree-tos` - agree to terms for Let's Encrypt, Daplie DNS
+* `--servername <servername>` - use `<servername>` instead of `localhost.daplie.com`
+* `--tunnel` - make world-visible (must use `--servername`)
 
 Specifying a custom HTTPS certificate:
 

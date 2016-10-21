@@ -8,6 +8,7 @@ var https = require('httpolyglot');
 var http = require('http');
 var fs = require('fs');
 var path = require('path');
+var DDNS = require('ddns-cli');
 var httpPort = 80;
 var httpsPort = 443;
 var lrPort = 35729;
@@ -56,9 +57,42 @@ function createInsecureServer(port, pubdir, opts) {
 }
 
 function createServer(port, pubdir, content, opts) {
+  function approveDomains(params, certs, cb) {
+    // This is where you check your database and associated
+    // email addresses with domains and agreements and such
+    var domains = params.domains;
+    //var p;
+    console.log('approveDomains');
+    console.log(domains);
+
+
+    // The domains being approved for the first time are listed in opts.domains
+    // Certs being renewed are listed in certs.altnames
+    if (certs) {
+      params.domains = certs.altnames;
+      //p = PromiseA.resolve();
+    }
+    else {
+      //params.email = opts.email;
+      if (!opts.agreeTos) {
+        console.error("You have not previously registered '" + domains + "' so you must specify --agree-tos to agree to both the Let's Encrypt and Daplie DNS terms of service.");
+        process.exit(1);
+        return;
+      }
+      params.agreeTos = opts.agreeTos;
+    }
+
+    // ddns.token(params.email, domains[0])
+    params.email = opts.email;
+    params.refreshToken = opts.refreshToken;
+    params.challengeType = 'dns-01';
+    params.cli = opts.argv;
+
+    cb(null, { options: params, certs: certs });
+  }
+
   return new PromiseA(function (realResolve) {
-    var server = https.createServer(opts.httpsOptions);
-    var app = require('./app');
+    var app = require('./lib/app.js');
 
     var directive = { public: pubdir, content: content, livereload: opts.livereload
       , servername: opts.servername, expressApp: opts.expressApp };
@@ -70,6 +104,48 @@ function createServer(port, pubdir, content, opts) {
       , server: server
       });
     }
+
+    // returns an instance of node-letsencrypt with additional helper methods
+    var webrootPath = require('os').tmpdir();
+    var leChallengeFs = require('le-challenge-fs').create({ webrootPath: webrootPath });
+    //var leChallengeSni = require('le-challenge-sni').create({ webrootPath: webrootPath });
+    var leChallengeDdns = require('le-challenge-ddns').create({ ttl: 1 });
+    var lex = require('letsencrypt-express').create({
+      // set to https://acme-v01.api.letsencrypt.org/directory in production
+      server: opts.debug ? 'staging' : 'https://acme-v01.api.letsencrypt.org/directory'
+
+    // If you wish to replace the default plugins, you may do so here
+    //
+    , challenges: {
+        'http-01': leChallengeFs
+      , 'tls-sni-01': leChallengeFs // leChallengeSni
+      , 'dns-01': leChallengeDdns
+      }
+    , challengeType: (opts.tunnel ? 'http-01' : 'dns-01')
+    , store: require('le-store-certbot').create({ webrootPath: webrootPath })
+    , webrootPath: webrootPath
+
+    // You probably wouldn't need to replace the default sni handler
+    // See https://github.com/Daplie/le-sni-auto if you think you do
+    //, sni: require('le-sni-auto').create({})
+
+    , approveDomains: approveDomains
+    });
+    var secureContext;
+    opts.httpsOptions.SNICallback = function (servername, cb ) {
+      console.log('[https] servername', servername);
+
+      if ('localhost.daplie.com' === servername) {
+        if (!secureContext) {
+          secureContext = tls.createSecureContext(opts.httpsOptions);
+        }
+        cb(null, secureContext);
+        return;
+      }
+
+      lex.httpsOptions.SNICallback(servername, cb);
+    };
+    var server = https.createServer(opts.httpsOptions);
 
     server.on('error', function (err) {
       if (opts.errorPort || opts.manualPort) {
@@ -93,7 +169,7 @@ function createServer(port, pubdir, content, opts) {
         var server2 = livereload.createServer({
           https: opts.httpsOptions
         , port: opts.lrPort
-        , exclusions: [ '.hg', '.git', '.svn', 'node_modules' ]
+        , exclusions: [ 'node_modules' ]
         });
 
         console.info("[livereload] watching " + pubdir);
@@ -119,7 +195,8 @@ function createServer(port, pubdir, content, opts) {
     }
 
     server.on('request', function (req, res) {
-      if (!req.socket.encrypted) {
+      console.log('[' + req.method + '] ' + req.url);
+      if (!req.socket.encrypted && !/\/\.well-known\/acme-challenge\//.test(req.url)) {
         opts.redirectApp(req, res);
         return;
       }
@@ -165,6 +242,7 @@ function run() {
   var opts = {
     agreeTos: argv.agreeTos || argv['agree-tos']
   , debug: argv.debug
+  , device: argv.device
   , email: argv.email
   , httpsOptions: {
       key: httpsOptions.key
@@ -174,7 +252,9 @@ function run() {
   , argv: argv
   };
   var peerCa;
+  var p;
 
+  opts.PromiseA = PromiseA;
   opts.httpsOptions.SNICallback = function (servername, cb) {
     if (!secureContext) {
       secureContext = tls.createSecureContext(opts.httpsOptions);
@@ -244,6 +324,9 @@ function run() {
   if (argv.p || argv.port || argv._[0]) {
     opts.manualPort = true;
   }
+  if (argv.t || argv.tunnel) {
+    opts.tunnel = true;
+  }
   if (argv.i || argv['insecure-port']) {
     opts.manualInsecurePort = true;
   }
@@ -257,13 +340,37 @@ function run() {
     opts.expressApp = require(path.resolve(process.cwd(), argv['express-app']));
   }
 
+  if (opts.email || opts.servername) {
+    if (!opts.agreeTos) {
+      console.warn("You may need to specify --agree-tos to agree to both the Let's Encrypt and Daplie DNS terms of service.");
+    }
+    if (!opts.email) {
+      // TODO store email in .ddnsrc.json
+      console.warn("You may need to specify --email to register with both the Let's Encrypt and Daplie DNS.");
+    }
+    p = DDNS.refreshToken({
+      email: opts.email
+    , silent: true
+    }, {
+      debug: false
+    , email: opts.argv.email
+    }).then(function (refreshToken) {
+      opts.refreshToken = refreshToken;
+    });
+  }
+  else {
+    p = PromiseA.resolve();
+  }
+
+  return p.then(function () {
+
   // can be changed to tunnel external port
   opts.redirectOptions = {
     port: opts.port
   };
   opts.redirectApp = require('redirect-https')(opts.redirectOptions);
 
-  return createServer(port, pubdir, content, opts).then(function () {
+  return createServer(port, pubdir, content, opts).then(function (servers) {
     var msg;
     var p;
     var httpsUrl;
@@ -292,12 +399,12 @@ function run() {
 
     if (!(argv.servername && defaultServername !== argv.servername && !(argv.key && argv.cert))) {
       // ifaces
-      opts.ifaces = require('./local-ip.js').find();
+      opts.ifaces = require('./lib/local-ip.js').find();
       promise = PromiseA.resolve();
     } else {
       console.info("Attempting to resolve external connection for '" + argv.servername + "'");
       try {
-        promise = require('./match-ips.js').match(argv.servername, opts);
+        promise = require('./lib/match-ips.js').match(argv.servername, opts);
       } catch(e) {
         console.warn("Upgrade to version 2.x to use automatic certificate issuance for '" + argv.servername + "'");
         promise = PromiseA.resolve();
@@ -333,6 +440,17 @@ function run() {
           }
         });
       }
+      else if (!opts.tunnel) {
+        console.info("External IP address does not match local IP address.");
+        console.info("Use --tunnel to allow the people of the Internet to access your server.");
+      }
+
+      if (opts.tunnel) {
+        require('./lib/tunnel.js').create(opts, servers);
+      }
+      else if (opts.ddns) {
+        require('./lib/ddns.js').create(opts, servers);
+      }
 
       Object.keys(opts.ifaces).forEach(function (iname) {
         var iface = opts.ifaces[iname];
@@ -359,6 +477,7 @@ function run() {
 
       console.info('');
     });
+  });
   });
 }
 
