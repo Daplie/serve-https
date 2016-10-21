@@ -57,7 +57,7 @@ function createInsecureServer(port, pubdir, opts) {
 function createServer(port, pubdir, content, opts) {
   return new PromiseA(function (realResolve) {
     var server = https.createServer(opts.httpsOptions);
-    var app = require('./app');
+    var app = require('../lib/app.js');
 
     var directive = { public: pubdir, content: content, livereload: opts.livereload
       , servername: opts.servername, expressApp: opts.expressApp };
@@ -154,7 +154,7 @@ function run() {
     if (argv.v) {
       console.warn("flag -v is reserved for future use. Use -V or --version for version information.");
     }
-    console.info('v' + require('./package.json').version);
+    console.info('v' + require('../package.json').version);
     return;
   }
 
@@ -292,12 +292,12 @@ function run() {
 
     if (!(argv.servername && defaultServername !== argv.servername && !(argv.key && argv.cert))) {
       // ifaces
-      opts.ifaces = require('./local-ip.js').find();
+      opts.ifaces = require('../lib/local-ip.js').find();
       promise = PromiseA.resolve();
     } else {
       console.info("Attempting to resolve external connection for '" + argv.servername + "'");
       try {
-        promise = require('./match-ips.js').match(argv.servername, opts);
+        promise = require('../lib/match-ips.js').match(argv.servername, opts);
       } catch(e) {
         console.warn("Upgrade to version 2.x to use automatic certificate issuance for '" + argv.servername + "'");
         promise = PromiseA.resolve();
