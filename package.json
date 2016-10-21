@@ -2,12 +2,12 @@
   "name": "serve-https",
   "version": "2.0.2",
   "description": "Serves HTTPS using TLS (SSL) certs for localhost.daplie.com - great for testing and development.",
-  "main": "serve.js",
+  "main": "bin/serve-https.js",
   "scripts": {
-    "test": "node serve.js -p 1443 -d /tmp/"
+    "test": "node bin/serve-https.js -p 8443 -d /tmp/"
   },
   "bin": {
-    "serve-https": "serve.js"
+    "serve-https": "./bin/serve-https.js"
   },
   "repository": {
     "type": "git",
