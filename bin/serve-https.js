@@ -381,30 +381,30 @@ function run() {
   opts.redirectApp = require('redirect-https')(opts.redirectOptions);
 
   return createServer(port, pubdir, content, opts).then(function (servers) {
-    var msg;
     var p;
     var httpsUrl;
+    var httpUrl;
     var promise;
 
+    console.info('');
+    console.info('Serving ' + pubdir + ' at ');
+    console.info('');
+
     // Port
-    msg = 'Serving ' + pubdir + ' at ';
     httpsUrl = 'https://' + opts.servername;
     p = opts.port;
     if (httpsPort !== p) {
       httpsUrl += ':' + p;
     }
-    console.info('');
-    console.info(msg);
-    console.info('');
     console.info('\t' + httpsUrl);
 
     // Insecure Port
+    httpUrl = 'http://' + opts.servername;
     p = opts.insecurePort;
     if (httpPort !== p) {
-      p = ':' + opts.insecurePort;
+      httpUrl += ':' + p;
     }
-    msg = '\thttp://' + opts.servername + p + ' (redirecting to https)';
-    console.info(msg);
+    console.info('\t' + httpUrl + ' (redirecting to https)');
     console.info('');
 
     if (!(argv.servername && defaultServername !== argv.servername && !(argv.key && argv.cert))) {
