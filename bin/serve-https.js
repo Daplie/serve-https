@@ -399,7 +399,7 @@ function run() {
     console.info('\t' + httpsUrl);
 
     // Insecure Port
-    p = '';
+    p = opts.insecurePort;
     if (httpPort !== p) {
       p = ':' + opts.insecurePort;
     }
