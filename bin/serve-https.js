@@ -177,7 +177,7 @@ function createServer(port, pubdir, content, opts) {
         server2.watch(pubdir);
       }
 
-      if ('false' !== opts.insecurePort && httpPort !== opts.insecurePort) {
+      if ('false' !== opts.insecurePort && httpPort === opts.insecurePort) {
         return createInsecureServer(opts.insecurePort, pubdir, opts).then(function (_server) {
           insecureServer = _server;
           resolve();
