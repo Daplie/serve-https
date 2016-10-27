@@ -178,7 +178,7 @@ function createServer(port, pubdir, content, opts) {
       }
 
       // if we haven't disabled insecure port
-      if ('false' === opts.insecurePort) {
+      if ('false' !== opts.insecurePort) {
         // and both ports are the default
         if ((httpsPort === opts.port && httpPort === opts.insecurePort)
           // or other case
