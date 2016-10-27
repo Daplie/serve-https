@@ -122,7 +122,11 @@ function createServer(port, pubdir, content, opts) {
       , 'dns-01': leChallengeDdns
       }
     , challengeType: (opts.tunnel ? 'http-01' : 'dns-01')
-    , store: require('le-store-certbot').create({ webrootPath: webrootPath, homedir: opts.homedir })
+    , store: require('le-store-certbot').create({
+        webrootPath: webrootPath
+      , configDir: path.join((opts.homedir || '~'), 'letsencrypt', 'etc')
+      , homedir: opts.homedir
+      })
     , webrootPath: webrootPath
 
     // You probably wouldn't need to replace the default sni handler
