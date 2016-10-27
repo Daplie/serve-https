@@ -249,6 +249,7 @@ function run() {
     , cert: httpsOptions.cert
     //, ca: httpsOptions.ca
     }
+  , homedir: argv.homedir
   , argv: argv
   };
   var peerCa;
@@ -351,6 +352,7 @@ function run() {
     p = DDNS.refreshToken({
       email: opts.email
     , silent: true
+    , homedir: opts.homedir
     }, {
       debug: false
     , email: opts.argv.email
