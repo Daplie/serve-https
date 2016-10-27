@@ -177,15 +177,23 @@ function createServer(port, pubdir, content, opts) {
         server2.watch(pubdir);
       }
 
-      if ('false' !== opts.insecurePort && httpPort === opts.insecurePort) {
-        return createInsecureServer(opts.insecurePort, pubdir, opts).then(function (_server) {
-          insecureServer = _server;
-          resolve();
-        });
-      } else {
-        opts.insecurePort = opts.port;
-        resolve();
+      // if we haven't disabled insecure port
+      if ('false' === opts.insecurePort) {
+        // and both ports are the default
+        if ((httpsPort === opts.port && httpPort === opts.insecurePort)
+          // or other case
+          || (httpPort !== opts.insecurePort && opts.port !== opts.insecurePort)
+        ) {
+          return createInsecureServer(opts.insecurePort, pubdir, opts).then(function (_server) {
+            insecureServer = _server;
+            resolve();
+          });
+        }
       }
+
+      opts.insecurePort = opts.port;
+      resolve();
+      return;
     });
 
     if ('function' === typeof app) {
