@@ -27,11 +27,14 @@ Install
 -------
 
 ```bash
-npm install --global serve-https
+npm install --global serve-https@1.x
+```
+
+```bash
 serve-https
 ```
 
-```
+```bash
 Serving /Users/foo/ at https://localhost.daplie.com:8443
 ```
 
