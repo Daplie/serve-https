@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Daplie/serve-https.git"
+    "url": "git+https://git.daplie.com/Daplie/serve-https.git"
   },
   "keywords": [
     "https",
@@ -34,28 +34,28 @@
   "author": "AJ ONeal <coolaj86@gmail.com> (https://coolaj86.com/)",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/Daplie/server-https/issues"
+    "url": "https://git.daplie.com/Daplie/server-https/issues"
   },
-  "homepage": "https://github.com/Daplie/serve-https#readme",
+  "homepage": "https://git.daplie.com/Daplie/serve-https#readme",
   "dependencies": {
     "bluebird": "^3.4.6",
-    "daplie-tunnel": "git+https://github.com/Daplie/daplie-cli-tunnel.git#master",
-    "ddns-cli": "git+https://github.com/Daplie/node-ddns-client.git#master",
+    "daplie-tunnel": "git+https://git.daplie.com/Daplie/daplie-cli-tunnel.git#master",
+    "ddns-cli": "git+https://git.daplie.com/Daplie/node-ddns-client.git#master",
     "finalhandler": "^0.4.0",
     "httpolyglot": "^0.1.1",
     "ipify": "^1.1.0",
-    "le-challenge-ddns": "git+https://github.com/Daplie/le-challenge-ddns.git#master",
-    "le-challenge-fs": "git+https://github.com/Daplie/le-challenge-fs.git#master",
+    "le-challenge-ddns": "git+https://git.daplie.com/Daplie/le-challenge-ddns.git#master",
+    "le-challenge-fs": "git+https://git.daplie.com/Daplie/le-challenge-fs.git#master",
     "le-challenge-sni": "^2.0.1",
-    "letsencrypt-express": "git+https://github.com/Daplie/letsencrypt-express.git#master",
-    "letsencrypt": "git+https://github.com/Daplie/node-letsencrypt.git#master",
+    "greenlock-express": "git+https://git.daplie.com/Daplie/greenlock-express.git#master",
+    "greenlock": "git+https://git.daplie.com/Daplie/node-greenlock.git#master",
     "livereload": "^0.6.0",
     "localhost.daplie.com-certificates": "^1.2.0",
     "minimist": "^1.1.1",
-    "oauth3-cli": "git+https://github.com/OAuth3/oauth3-cli.git#master",
+    "oauth3-cli": "git+https://git.daplie.com/OAuth3/oauth3-cli.git#master",
     "redirect-https": "^1.1.0",
     "serve-index": "^1.7.0",
     "serve-static": "^1.10.0",
-    "stunnel": "git+https://github.com/Daplie/node-tunnel-client.git#master"
+    "stunnel": "git+https://git.daplie.com/Daplie/node-tunnel-client.git#master"
   }
 }
