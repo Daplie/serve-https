@@ -27,7 +27,17 @@ Install
 -------
 
 ```bash
+# v2.x
+npm install --global serve-https@2.x
+
+# v1.x
 npm install --global serve-https@1.x
+
+# master in git (via ssh)
+npm install -g git+ssh://git@git.daplie.com:Daplie/serve-https
+
+# master in git (unauthenticated)
+npm install -g git+https://git@git.daplie.com:Daplie/serve-https
 ```
 
 ```bash
