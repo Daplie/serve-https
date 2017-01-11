@@ -255,6 +255,7 @@ function run() {
     agreeTos: argv.agreeTos || argv['agree-tos']
   , debug: argv.debug
   , device: argv.device
+  , provider: (argv.provider && 'false' !== argv.provider) ? argv.provider : 'oauth3.org'
   , email: argv.email
   , httpsOptions: {
       key: httpsOptions.key
@@ -363,6 +364,7 @@ function run() {
     }
     p = DDNS.refreshToken({
       email: opts.email
+    , providerUrl: opts.provider
     , silent: true
     , homedir: opts.homedir
     }, {
