@@ -51,8 +51,6 @@ Serving /Users/foo/ at https://localhost.daplie.com:8443
 Usage
 -----
 
-**Note**: these examples also show features of version 2.x which is currently blocked by a bug.
-
 Examples:
 
 ```
