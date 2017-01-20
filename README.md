@@ -54,7 +54,15 @@ Usage
 Examples:
 
 ```
-node serve.js --servername jane.daplie.me --agree-tos --email jane@example.com --tunnel
+# Install
+npm install -g git+https://git@git.daplie.com:Daplie/serve-https
+
+# Use tunnel
+serve-https --servername jane.daplie.me --agree-tos --email jane@example.com --tunnel
+
+# BEFORE you access in a browser for the first time, use curl
+# (because there's a concurrency bug in the greenlock setup)
+curl https://jane.daplie.me
 ```
 
 Options:
