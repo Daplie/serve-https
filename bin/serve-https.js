@@ -23,7 +23,7 @@ function showError(err, port) {
   }
   else if ('EADDRINUSE' === err.code) {
     console.warn("Another server is already running on '" + port + "'.");
-    console.warn("You can probably fix that by rebooting your comupter (or stopping it if you know what it is).");
+    console.warn("You can probably fix that by rebooting your computer (or stopping it if you know what it is).");
   }
 }
 
