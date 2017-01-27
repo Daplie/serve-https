@@ -110,7 +110,7 @@ function createServer(port, pubdir, content, opts) {
     var leChallengeFs = require('le-challenge-fs').create({ webrootPath: webrootPath });
     //var leChallengeSni = require('le-challenge-sni').create({ webrootPath: webrootPath });
     var leChallengeDdns = require('le-challenge-ddns').create({ ttl: 1 });
-    var lex = require('letsencrypt-express').create({
+    var lex = require('greenlock-express').create({
       // set to https://acme-v01.api.letsencrypt.org/directory in production
       server: opts.debug ? 'staging' : 'https://acme-v01.api.letsencrypt.org/directory'
 
