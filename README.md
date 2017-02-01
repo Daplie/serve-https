@@ -18,7 +18,7 @@ serve-https
 
 A simple HTTPS static file server with valid TLS (SSL) certs.
 
-Comes bundled a valid certificate for localhost.daplie.com,
+Comes bundled a valid certificate for localhost.daplie.me,
 which is great for testing and development, and you can specify your own.
 
 Also great for testing ACME certs from letsencrypt.org.
@@ -45,7 +45,7 @@ serve-https
 ```
 
 ```bash
-Serving /Users/foo/ at https://localhost.daplie.com:8443
+Serving /Users/foo/ at https://localhost.daplie.me:8443
 ```
 
 Usage
@@ -75,7 +75,7 @@ Options:
 
 * `--email <email>` - email to use for Let's Encrypt, Daplie DNS, Daplie Tunnel
 * `--agree-tos` - agree to terms for Let's Encrypt, Daplie DNS
-* `--servername <servername>` - use `<servername>` instead of `localhost.daplie.com`
+* `--servername <servername>` - use `<servername>` instead of `localhost.daplie.me`
 * `--tunnel` - make world-visible (must use `--servername`)
 
 Specifying a custom HTTPS certificate:
@@ -104,18 +104,18 @@ serve-https -p 1443 -c 'Hello from 1443' &
 serve-https -p 2443 -c 'Hello from 2443' &
 serve-https -p 3443 -d /tmp &
 
-curl https://localhost.daplie.com:1443
+curl https://localhost.daplie.me:1443
 > Hello from 1443
 
 curl --insecure https://localhost:2443
 > Hello from 2443
 
-curl https://localhost.daplie.com:3443
+curl https://localhost.daplie.me:3443
 > [html index listing of /tmp]
 ```
 
-And if you tested <http://localhost.daplie.com:3443> in a browser,
-it would redirect to <https://localhost.daplie.com:3443> (on the same port).
+And if you tested <http://localhost.daplie.me:3443> in a browser,
+it would redirect to <https://localhost.daplie.me:3443> (on the same port).
 
 (in curl it would just show an error message)
 
