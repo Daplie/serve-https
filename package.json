@@ -1,7 +1,7 @@
 {
   "name": "serve-https",
   "version": "2.0.8",
-  "description": "Serves HTTPS using TLS (SSL) certs for localhost.daplie.com - great for testing and development.",
+  "description": "Serves HTTPS using TLS (SSL) certs for localhost.daplie.me - great for testing and development.",
   "main": "bin/serve-https.js",
   "scripts": {
     "test": "node bin/serve-https.js -p 8443 -d /tmp/"
@@ -50,7 +50,7 @@
     "greenlock-express": "git+https://git.daplie.com/Daplie/greenlock-express.git#master",
     "greenlock": "git+https://git.daplie.com/Daplie/node-greenlock.git#master",
     "livereload": "^0.6.0",
-    "localhost.daplie.com-certificates": "^1.2.0",
+    "localhost.daplie.me-certificates": "^1.2.0",
     "minimist": "^1.1.1",
     "oauth3-cli": "git+https://git.daplie.com/OAuth3/oauth3-cli.git#master",
     "redirect-https": "^1.1.0",

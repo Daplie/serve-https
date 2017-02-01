@@ -96,7 +96,7 @@ function createServer(port, pubdir, content, opts) {
 
     var directive = { public: pubdir, content: content, livereload: opts.livereload
       , servername: opts.servername
-      , servers: opts.servers
+      , sites: opts.sites
       , expressApp: opts.expressApp };
     var insecureServer;
 
@@ -132,7 +132,7 @@ function createServer(port, pubdir, content, opts) {
     , webrootPath: webrootPath
 
     // You probably wouldn't need to replace the default sni handler
-    // See https://github.com/Daplie/le-sni-auto if you think you do
+    // See https://git.daplie.com/Daplie/le-sni-auto if you think you do
     //, sni: require('le-sni-auto').create({})
 
     , approveDomains: approveDomains
@@ -140,20 +140,9 @@ function createServer(port, pubdir, content, opts) {
 
     var secureContexts = {
       'localhost.daplie.me': null
-    , 'localhost.daplie.com': null
     };
     opts.httpsOptions.SNICallback = function (servername, cb ) {
       console.log('[https] servername', servername);
-
-      // Deprecated Static Certs
-      if ('localhost.daplie.com' === servername) {
-        // TODO deprecate
-        if (!secureContexts[servername]) {
-          secureContexts[servername] = tls.createSecureContext(require('localhost.daplie.com-certificates').merge({}));
-        }
-        cb(null, secureContexts[servername]);
-        return;
-      }
 
       // Static Certs
       if ('localhost.daplie.me' === servername) {
@@ -249,8 +238,7 @@ function createServer(port, pubdir, content, opts) {
 module.exports.createServer = createServer;
 
 function run() {
-  // TODO switch to localhost.daplie.me
-  var defaultServername = 'localhost.daplie.com';
+  var defaultServername = 'localhost.daplie.me';
   var minimist = require('minimist');
   var argv = minimist(process.argv.slice(2));
   var port = parseInt(argv.p || argv.port || argv._[0], 10) || httpsPort;
@@ -268,7 +256,7 @@ function run() {
   }
 
   // letsencrypt
-  var httpsOptions = require('localhost.daplie.com-certificates').merge({});
+  var httpsOptions = require('localhost.daplie.me-certificates').merge({});
   var secureContext;
 
   var opts = {
@@ -302,7 +290,7 @@ function run() {
     argv.cert = argv.cert || '/etc/letsencrypt/live/' + letsencryptHost + '/fullchain.pem';
     argv.root = argv.root || argv.chain || '';
     argv.servername = argv.servername || letsencryptHost;
-    argv.servers = argv.servers || [ { name: argv.servername || letsencryptHost , path: '.' } ];
+    argv.sites = argv.sites || [ { name: argv.servername || letsencryptHost , path: '.' } ];
     argv['serve-root'] = argv['serve-root'] || argv['serve-chain'];
     // argv[express-app]
   }
@@ -354,16 +342,16 @@ function run() {
 
 
   opts.servername = defaultServername;
-  opts.servers = [ { name: defaultServername , path: '.' } ];
+  opts.sites = [ { name: defaultServername , path: '.' } ];
 
   if (argv.servername) {
     opts.servername = argv.servername;
-    if (!argv.servers) {
-      opts.servers = [ { name: argv.servername, path: '.' } ];
+    if (!argv.sites) {
+      opts.sites = [ { name: argv.servername, path: '.' } ];
     }
   }
-  if (argv.servers) {
-    opts.servers = argv.servers.split(',').map(function (servername) {
+  if (argv.sites) {
+    opts.sites = argv.sites.split(',').map(function (servername) {
       var serverparts = servername.split('|');
       // TODO allow reverse proxy
       return {
