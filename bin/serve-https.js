@@ -95,7 +95,9 @@ function createServer(port, pubdir, content, opts) {
     var app = require('../lib/app.js');
 
     var directive = { public: pubdir, content: content, livereload: opts.livereload
-      , servername: opts.servername, expressApp: opts.expressApp };
+      , servername: opts.servername
+      , servers: opts.servers
+      , expressApp: opts.expressApp };
     var insecureServer;
 
     function resolve() {
@@ -135,18 +137,35 @@ function createServer(port, pubdir, content, opts) {
 
     , approveDomains: approveDomains
     });
-    var secureContext;
+
+    var secureContexts = {
+      'localhost.daplie.me': null
+    , 'localhost.daplie.com': null
+    };
     opts.httpsOptions.SNICallback = function (servername, cb ) {
       console.log('[https] servername', servername);
 
+      // Deprecated Static Certs
       if ('localhost.daplie.com' === servername) {
-        if (!secureContext) {
-          secureContext = tls.createSecureContext(opts.httpsOptions);
+        // TODO deprecate
+        if (!secureContexts[servername]) {
+          secureContexts[servername] = tls.createSecureContext(require('localhost.daplie.com-certificates').merge({}));
         }
-        cb(null, secureContext);
+        cb(null, secureContexts[servername]);
         return;
       }
 
+      // Static Certs
+      if ('localhost.daplie.me' === servername) {
+        // TODO implement
+        if (!secureContexts[servername]) {
+          secureContexts[servername] = tls.createSecureContext(require('localhost.daplie.me-certificates').merge({}));
+        }
+        cb(null, secureContexts[servername]);
+        return;
+      }
+
+      // Dynamic Certs
       lex.httpsOptions.SNICallback(servername, cb);
     };
     var server = https.createServer(opts.httpsOptions);
@@ -230,6 +249,7 @@ function createServer(port, pubdir, content, opts) {
 module.exports.createServer = createServer;
 
 function run() {
+  // TODO switch to localhost.daplie.me
   var defaultServername = 'localhost.daplie.com';
   var minimist = require('minimist');
   var argv = minimist(process.argv.slice(2));
@@ -282,6 +302,7 @@ function run() {
     argv.cert = argv.cert || '/etc/letsencrypt/live/' + letsencryptHost + '/fullchain.pem';
     argv.root = argv.root || argv.chain || '';
     argv.servername = argv.servername || letsencryptHost;
+    argv.servers = argv.servers || [ { name: argv.servername || letsencryptHost , path: '.' } ];
     argv['serve-root'] = argv['serve-root'] || argv['serve-chain'];
     // argv[express-app]
   }
@@ -331,10 +352,27 @@ function run() {
     }
   }
 
+
   opts.servername = defaultServername;
+  opts.servers = [ { name: defaultServername , path: '.' } ];
+
   if (argv.servername) {
     opts.servername = argv.servername;
+    if (!argv.servers) {
+      opts.servers = [ { name: argv.servername, path: '.' } ];
+    }
   }
+  if (argv.servers) {
+    opts.servers = argv.servers.split(',').map(function (servername) {
+      var serverparts = servername.split('|');
+      // TODO allow reverse proxy
+      return {
+        name: serverparts.shift()
+      , paths: serverparts
+      };
+    });
+  }
+
   if (argv.p || argv.port || argv._[0]) {
     opts.manualPort = true;
   }
