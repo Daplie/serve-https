@@ -58,7 +58,7 @@ Examples:
 npm install -g git+https://git@git.daplie.com:Daplie/serve-https
 
 # Use tunnel
-serve-https --servername jane.daplie.me --agree-tos --email jane@example.com --tunnel
+serve-https --sites jane.daplie.me --agree-tos --email jane@example.com --tunnel
 
 # BEFORE you access in a browser for the first time, use curl
 # (because there's a concurrency bug in the greenlock setup)
@@ -75,8 +75,8 @@ Options:
 
 * `--email <email>` - email to use for Let's Encrypt, Daplie DNS, Daplie Tunnel
 * `--agree-tos` - agree to terms for Let's Encrypt, Daplie DNS
-* `--servername <servername>` - use `<servername>` instead of `localhost.daplie.me`
-* `--tunnel` - make world-visible (must use `--servername`)
+* `--sites <servername1[,servername2]>` - use `<servername>` instead of `localhost.daplie.me`
+* `--tunnel` - make world-visible (must use `--sites`)
 
 Specifying a custom HTTPS certificate:
 
@@ -93,7 +93,7 @@ Note: `--root` may specify single cert or a bundle, and may be used multiple tim
 Other options:
 
 * `--serve-root true` alias for `-c` with the contents of root.pem
-* `--servername example.com` changes the servername logged to the console
+* `--sites example.com` changes the servername logged to the console
 * `--letsencrypt-certs example.com` sets and key, fullchain, and root to standard letsencrypt locations
 
 Examples
@@ -139,7 +139,7 @@ which is equilavent to
 
 ```bash
 sudo serve-https -p 8443 \
-  --servername test.mooo.com
+  --sites test.mooo.com
   --key /etc/letsencrypt/live/test.mooo.com/privkey.pem \
   --cert /etc/letsencrypt/live/test.mooo.com/fullchain.pem \
   --root /etc/letsencrypt/live/test.mooo.com/root.pem \
