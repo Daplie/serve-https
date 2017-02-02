@@ -75,7 +75,8 @@ Options:
 
 * `--email <email>` - email to use for Let's Encrypt, Daplie DNS, Daplie Tunnel
 * `--agree-tos` - agree to terms for Let's Encrypt, Daplie DNS
-* `--sites <servername1[,servername2]>` - use `<servername>` instead of `localhost.daplie.me`
+* `--sites <domain.tld>` comma-separated list of domains to respond to (default is `localhost.daplie.me`)
+  * optionally you may include the path to serve with `|` such as `example.com|/tmp,example.net/srv/www`
 * `--tunnel` - make world-visible (must use `--sites`)
 
 Specifying a custom HTTPS certificate:
