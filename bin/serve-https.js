@@ -95,7 +95,6 @@ function createServer(port, pubdir, content, opts) {
     var app = require('../lib/app.js');
 
     var directive = { public: pubdir, content: content, livereload: opts.livereload
-      , servername: opts.servername
       , sites: opts.sites
       , expressApp: opts.expressApp };
     var insecureServer;
@@ -141,21 +140,21 @@ function createServer(port, pubdir, content, opts) {
     var secureContexts = {
       'localhost.daplie.me': null
     };
-    opts.httpsOptions.SNICallback = function (servername, cb ) {
-      console.log('[https] servername', servername);
+    opts.httpsOptions.SNICallback = function (sni, cb ) {
+      console.log('[https] sni', sni);
 
       // Static Certs
-      if ('localhost.daplie.me' === servername) {
+      if ('localhost.daplie.me' === sni) {
         // TODO implement
-        if (!secureContexts[servername]) {
-          secureContexts[servername] = tls.createSecureContext(require('localhost.daplie.me-certificates').merge({}));
+        if (!secureContexts[sni]) {
+          secureContexts[sni] = tls.createSecureContext(require('localhost.daplie.me-certificates').merge({}));
         }
-        cb(null, secureContexts[servername]);
+        cb(null, secureContexts[sni]);
         return;
       }
 
       // Dynamic Certs
-      lex.httpsOptions.SNICallback(servername, cb);
+      lex.httpsOptions.SNICallback(sni, cb);
     };
     var server = https.createServer(opts.httpsOptions);
 
@@ -277,7 +276,7 @@ function run() {
   var p;
 
   opts.PromiseA = PromiseA;
-  opts.httpsOptions.SNICallback = function (servername, cb) {
+  opts.httpsOptions.SNICallback = function (sni, cb) {
     if (!secureContext) {
       secureContext = tls.createSecureContext(opts.httpsOptions);
     }
@@ -286,11 +285,11 @@ function run() {
   };
 
   if (letsencryptHost) {
+    // TODO remove in v3.x (aka goldilocks)
     argv.key = argv.key || '/etc/letsencrypt/live/' + letsencryptHost + '/privkey.pem';
     argv.cert = argv.cert || '/etc/letsencrypt/live/' + letsencryptHost + '/fullchain.pem';
     argv.root = argv.root || argv.chain || '';
-    argv.servername = argv.servername || letsencryptHost;
-    argv.sites = argv.sites || [ { name: argv.servername || letsencryptHost , path: '.' } ];
+    argv.sites = argv.sites || (argv.servername || letsencryptHost);
     argv['serve-root'] = argv['serve-root'] || argv['serve-chain'];
     // argv[express-app]
   }
@@ -341,18 +340,17 @@ function run() {
   }
 
 
-  opts.servername = defaultServername;
   opts.sites = [ { name: defaultServername , path: '.' } ];
-
   if (argv.servername) {
-    opts.servername = argv.servername;
-    if (!argv.sites) {
-      opts.sites = [ { name: argv.servername, path: '.' } ];
+    // TODO remove in v3.x (aka goldilocks)
+    if (argv.sites) {
+      throw new Error('specify only --sites, not --servername');
     }
+    opts.sites = [ { name: argv.servername, path: '.' } ];
   }
   if (argv.sites) {
-    opts.sites = argv.sites.split(',').map(function (servername) {
-      var serverparts = servername.split('|');
+    opts.sites = argv.sites.split(',').map(function (name) {
+      var serverparts = name.split('|');
       // TODO allow reverse proxy
       return {
         name: serverparts.shift()
@@ -360,6 +358,8 @@ function run() {
       };
     });
   }
+  // TODO use arrays in all things
+  opts._old_server_name = opts.sites[0].name;
 
   if (argv.p || argv.port || argv._[0]) {
     opts.manualPort = true;
@@ -380,7 +380,7 @@ function run() {
     opts.expressApp = require(path.resolve(process.cwd(), argv['express-app']));
   }
 
-  if (opts.email || opts.servername) {
+  if (opts.email || argv.sites || argv.servername) {
     if (!opts.agreeTos) {
       console.warn("You may need to specify --agree-tos to agree to both the Let's Encrypt and Daplie DNS terms of service.");
     }
@@ -423,7 +423,7 @@ function run() {
     console.info('');
 
     // Port
-    httpsUrl = 'https://' + opts.servername;
+    httpsUrl = 'https://' + opts._old_server_name;
     p = opts.port;
     if (httpsPort !== p) {
       httpsUrl += ':' + p;
@@ -431,7 +431,7 @@ function run() {
     console.info('\t' + httpsUrl);
 
     // Insecure Port
-    httpUrl = 'http://' + opts.servername;
+    httpUrl = 'http://' + opts._old_server_name;
     p = opts.insecurePort;
     if (httpPort !== p) {
       httpUrl += ':' + p;
@@ -439,16 +439,16 @@ function run() {
     console.info('\t' + httpUrl + ' (redirecting to https)');
     console.info('');
 
-    if (!(argv.servername && defaultServername !== argv.servername && !(argv.key && argv.cert))) {
+    if (!((argv.sites || argv.servername) && defaultServername !== (argv.sites || argv.servername) && !(argv.key && argv.cert))) {
       // ifaces
       opts.ifaces = require('../lib/local-ip.js').find();
       promise = PromiseA.resolve();
     } else {
-      console.info("Attempting to resolve external connection for '" + argv.servername + "'");
+      console.info("Attempting to resolve external connection for '" + opts._old_server_name + "'");
       try {
-        promise = require('../lib/match-ips.js').match(argv.servername, opts);
+        promise = require('../lib/match-ips.js').match(opts._old_server_name, opts);
       } catch(e) {
-        console.warn("Upgrade to version 2.x to use automatic certificate issuance for '" + argv.servername + "'");
+        console.warn("Upgrade to version 2.x to use automatic certificate issuance for '" + opts._old_server_name + "'");
         promise = PromiseA.resolve();
       }
     }
@@ -456,7 +456,7 @@ function run() {
     return promise.then(function (matchingIps) {
       if (matchingIps) {
         if (!matchingIps.length) {
-          console.info("Neither the attached nor external interfaces match '" + argv.servername + "'");
+          console.info("Neither the attached nor external interfaces match '" + opts._old_server_name + "'");
         }
       }
       opts.matchingIps = matchingIps || [];
