@@ -253,6 +253,10 @@ function run() {
     console.info('v' + require('../package.json').version);
     return;
   }
+  if (argv.servername && argv.sites) {
+    throw new Error('specify only --sites, not --servername');
+  }
+  argv.sites = argv.sites || argv.servername;
 
   // letsencrypt
   var httpsOptions = require('localhost.daplie.me-certificates').merge({});
@@ -289,7 +293,7 @@ function run() {
     argv.key = argv.key || '/etc/letsencrypt/live/' + letsencryptHost + '/privkey.pem';
     argv.cert = argv.cert || '/etc/letsencrypt/live/' + letsencryptHost + '/fullchain.pem';
     argv.root = argv.root || argv.chain || '';
-    argv.sites = argv.sites || (argv.servername || letsencryptHost);
+    argv.sites = argv.sites || letsencryptHost;
     argv['serve-root'] = argv['serve-root'] || argv['serve-chain'];
     // argv[express-app]
   }
@@ -341,23 +345,17 @@ function run() {
 
 
   opts.sites = [ { name: defaultServername , path: '.' } ];
-  if (argv.servername) {
-    // TODO remove in v3.x (aka goldilocks)
-    if (argv.sites) {
-      throw new Error('specify only --sites, not --servername');
-    }
-    opts.sites = [ { name: argv.servername, path: '.' } ];
-  }
   if (argv.sites) {
     opts.sites = argv.sites.split(',').map(function (name) {
-      var serverparts = name.split('|');
+      var nameparts = name.split('|');
       // TODO allow reverse proxy
       return {
-        name: serverparts.shift()
-      , paths: serverparts
+        name: nameparts.shift()
+      , paths: nameparts
       };
     });
   }
+  console.log('opts.sites', opts.sites);
   // TODO use arrays in all things
   opts._old_server_name = opts.sites[0].name;
 
@@ -380,7 +378,7 @@ function run() {
     opts.expressApp = require(path.resolve(process.cwd(), argv['express-app']));
   }
 
-  if (opts.email || argv.sites || argv.servername) {
+  if (opts.email || argv.sites) {
     if (!opts.agreeTos) {
       console.warn("You may need to specify --agree-tos to agree to both the Let's Encrypt and Daplie DNS terms of service.");
     }
@@ -439,7 +437,7 @@ function run() {
     console.info('\t' + httpUrl + ' (redirecting to https)');
     console.info('');
 
-    if (!((argv.sites || argv.servername) && defaultServername !== (argv.sites || argv.servername) && !(argv.key && argv.cert))) {
+    if (!(argv.sites && (defaultServername !== argv.sites) && !(argv.key && argv.cert))) {
       // ifaces
       opts.ifaces = require('../lib/local-ip.js').find();
       promise = PromiseA.resolve();
