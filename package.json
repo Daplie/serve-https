@@ -1,6 +1,6 @@
 {
   "name": "serve-https",
-  "version": "2.1.6",
+  "version": "2.1.7",
   "description": "Serves HTTPS using TLS (SSL) certs for localhost.daplie.me - great for testing and development.",
   "main": "bin/serve-https.js",
   "scripts": {
