@@ -347,17 +347,19 @@ function run() {
 
   opts.sites = [ { name: defaultServername , path: '.' } ];
   if (argv.sites) {
+    opts._externalHost = false;
     opts.sites = argv.sites.split(',').map(function (name) {
       var nameparts = name.split('|');
+      var servername = nameparts.shift();
+      opts._externalHost = opts._externalHost || !/(^|\.)localhost\./.test(servername);
       // TODO allow reverse proxy
       return {
-        name: nameparts.shift()
+        name: servername
         // there should always be a path
       , paths: nameparts.length && nameparts || [ defaultWebRoot ]
       };
     });
   }
-  console.log('opts.sites', opts.sites);
   // TODO use arrays in all things
   opts._old_server_name = opts.sites[0].name;
   opts.pubdir = defaultWebRoot;
@@ -381,7 +383,7 @@ function run() {
     opts.expressApp = require(path.resolve(process.cwd(), argv['express-app']));
   }
 
-  if (opts.email || argv.sites) {
+  if (opts.email || opts._externalHost) {
     if (!opts.agreeTos) {
       console.warn("You may need to specify --agree-tos to agree to both the Let's Encrypt and Daplie DNS terms of service.");
     }
@@ -442,6 +444,9 @@ function run() {
     console.info('');
 
     if (!(argv.sites && (defaultServername !== argv.sites) && !(argv.key && argv.cert))) {
+      // TODO what is this condition actually intending to test again?
+      // (I think it can be replaced with if (!opts._externalHost) { ... }
+
       // ifaces
       opts.ifaces = require('../lib/local-ip.js').find();
       promise = PromiseA.resolve();
