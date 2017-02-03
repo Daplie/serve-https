@@ -141,13 +141,17 @@ function createServer(port, _delete_me_, content, opts) {
       'localhost.daplie.me': null
     };
     opts.httpsOptions.SNICallback = function (sni, cb ) {
+      var tlsOptions;
       console.log('[https] sni', sni);
 
       // Static Certs
-      if ('localhost.daplie.me' === sni) {
+      if (/.*localhost.*\.daplie\.me/.test(sni.toLowerCase())) {
         // TODO implement
         if (!secureContexts[sni]) {
-          secureContexts[sni] = tls.createSecureContext(require('localhost.daplie.me-certificates').merge({}));
+          tlsOptions = require('localhost.daplie.me-certificates').mergeTlsOptions(sni, {});
+        }
+        if (tlsOptions) {
+          secureContexts[sni] = tls.createSecureContext(tlsOptions);
         }
         cb(null, secureContexts[sni]);
         return;
