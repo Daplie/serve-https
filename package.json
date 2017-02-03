@@ -50,7 +50,7 @@
     "greenlock-express": "git+https://git.daplie.com/Daplie/greenlock-express.git#master",
     "greenlock": "git+https://git.daplie.com/Daplie/node-greenlock.git#master",
     "livereload": "^0.6.0",
-    "localhost.daplie.me-certificates": "^1.2.0",
+    "localhost.daplie.me-certificates": "^1.3.0",
     "minimist": "^1.1.1",
     "oauth3-cli": "git+https://git.daplie.com/OAuth3/oauth3-cli.git#master",
     "redirect-https": "^1.1.0",
