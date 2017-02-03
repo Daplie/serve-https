@@ -69,6 +69,9 @@ Options:
 
 * `-p <port>` - i.e. `sudo serve-https -p 443` (defaults to 80+443 or 8443)
 * `-d <dirpath>` - i.e. `serve-https -d /tmp/` (defaults to `pwd`)
+  * you can use `:hostname` as a template for multiple directories
+  * Example A: `serve-https -d /srv/www/:hostname --sites localhost.foo.daplie.me,localhost.bar.daplie.me`
+  * Example B: `serve-https -d ./:hostname/public/ --sites localhost.foo.daplie.me,localhost.bar.daplie.me`
 * `-c <content>` - i.e. `server-https -c 'Hello, World! '` (defaults to directory index)
 * `--express-app <path>` - path to a file the exports an express-style app (`function (req, res, next) { ... }`)
 * `--livereload` - inject livereload into all html pages (see also: [fswatch](http://stackoverflow.com/a/13807906/151312)), but be careful if `<dirpath>` has thousands of files it will spike your CPU usage to 100%

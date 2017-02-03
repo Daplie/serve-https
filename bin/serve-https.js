@@ -243,7 +243,7 @@ function run() {
   var argv = minimist(process.argv.slice(2));
   var port = parseInt(argv.p || argv.port || argv._[0], 10) || httpsPort;
   var livereload = argv.livereload;
-  var defaultWebRoot = path.resolve(argv.d || argv._[1] || process.cwd());
+  var defaultWebRoot = path.resolve(argv['default-web-root'] || argv.d || argv._[1] || process.cwd());
   var content = argv.c;
   var letsencryptHost = argv['letsencrypt-certs'];
 
@@ -356,13 +356,15 @@ function run() {
       return {
         name: servername
         // there should always be a path
-      , paths: nameparts.length && nameparts || [ defaultWebRoot ]
+      , paths: nameparts.length && nameparts || [
+          defaultWebRoot.replace(/(:hostname|:servername)/g, servername)
+        ]
       };
     });
   }
   // TODO use arrays in all things
   opts._old_server_name = opts.sites[0].name;
-  opts.pubdir = defaultWebRoot;
+  opts.pubdir = defaultWebRoot.replace(/(:hostname|:servername).*/, '');
 
   if (argv.p || argv.port || argv._[0]) {
     opts.manualPort = true;
