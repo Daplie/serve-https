@@ -27,7 +27,7 @@ function showError(err, port) {
   }
 }
 
-function createInsecureServer(port, pubdir, opts) {
+function createInsecureServer(port, _delete_me_, opts) {
   return new PromiseA(function (realResolve) {
     var server = http.createServer();
 
@@ -44,7 +44,7 @@ function createInsecureServer(port, pubdir, opts) {
 
       opts.errorInsecurePort = err.toString();
 
-      return createInsecureServer(insecurePortFallback, pubdir, opts).then(resolve);
+      return createInsecureServer(insecurePortFallback, null, opts).then(resolve);
     });
 
     server.on('request', opts.redirectApp);
@@ -56,7 +56,7 @@ function createInsecureServer(port, pubdir, opts) {
   });
 }
 
-function createServer(port, pubdir, content, opts) {
+function createServer(port, _delete_me_, content, opts) {
   function approveDomains(params, certs, cb) {
     // This is where you check your database and associated
     // email addresses with domains and agreements and such
@@ -94,7 +94,7 @@ function createServer(port, pubdir, content, opts) {
   return new PromiseA(function (realResolve) {
     var app = require('../lib/app.js');
 
-    var directive = { public: pubdir, content: content, livereload: opts.livereload
+    var directive = { content: content, livereload: opts.livereload
       , sites: opts.sites
       , expressApp: opts.expressApp };
     var insecureServer;
@@ -167,7 +167,7 @@ function createServer(port, pubdir, content, opts) {
 
       opts.errorPort = err.toString();
 
-      return createServer(portFallback, pubdir, content, opts).then(resolve);
+      return createServer(portFallback, null, content, opts).then(resolve);
     });
 
     server.listen(port, function () {
@@ -183,9 +183,10 @@ function createServer(port, pubdir, content, opts) {
         , exclusions: [ 'node_modules' ]
         });
 
-        console.info("[livereload] watching " + pubdir);
+        console.info("[livereload] watching " + opts.pubdir);
         console.warn("WARNING: If CPU usage spikes to 100% it's because too many files are being watched");
-        server2.watch(pubdir);
+        // TODO create map of directories to watch from opts.sites and iterate over it
+        server2.watch(opts.pubdir);
       }
 
       // if we haven't disabled insecure port
@@ -195,7 +196,7 @@ function createServer(port, pubdir, content, opts) {
           // or other case
           || (httpPort !== opts.insecurePort && opts.port !== opts.insecurePort)
         ) {
-          return createInsecureServer(opts.insecurePort, pubdir, opts).then(function (_server) {
+          return createInsecureServer(opts.insecurePort, null, opts).then(function (_server) {
             insecureServer = _server;
             resolve();
           });
@@ -242,7 +243,7 @@ function run() {
   var argv = minimist(process.argv.slice(2));
   var port = parseInt(argv.p || argv.port || argv._[0], 10) || httpsPort;
   var livereload = argv.livereload;
-  var pubdir = path.resolve(argv.d || argv._[1] || process.cwd());
+  var defaultWebRoot = path.resolve(argv.d || argv._[1] || process.cwd());
   var content = argv.c;
   var letsencryptHost = argv['letsencrypt-certs'];
 
@@ -351,13 +352,15 @@ function run() {
       // TODO allow reverse proxy
       return {
         name: nameparts.shift()
-      , paths: nameparts
+        // there should always be a path
+      , paths: nameparts.length && nameparts || [ defaultWebRoot ]
       };
     });
   }
   console.log('opts.sites', opts.sites);
   // TODO use arrays in all things
   opts._old_server_name = opts.sites[0].name;
+  opts.pubdir = defaultWebRoot;
 
   if (argv.p || argv.port || argv._[0]) {
     opts.manualPort = true;
@@ -410,14 +413,15 @@ function run() {
   };
   opts.redirectApp = require('redirect-https')(opts.redirectOptions);
 
-  return createServer(port, pubdir, content, opts).then(function (servers) {
+  return createServer(port, null, content, opts).then(function (servers) {
     var p;
     var httpsUrl;
     var httpUrl;
     var promise;
 
+    // TODO show all sites
     console.info('');
-    console.info('Serving ' + pubdir + ' at ');
+    console.info('Serving ' + opts.pubdir + ' at ');
     console.info('');
 
     // Port
