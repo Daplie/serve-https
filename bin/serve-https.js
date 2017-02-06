@@ -363,6 +363,8 @@ function run() {
       , paths: nameparts.length && nameparts || [
           defaultWebRoot.replace(/(:hostname|:servername)/g, servername)
         ]
+        // TODO check for existing custom path before issuing with greenlock
+      , _hasCustomPath: !!nameparts.length
       };
     });
   }
