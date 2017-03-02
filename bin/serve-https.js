@@ -94,9 +94,12 @@ function createServer(port, _delete_me_, content, opts) {
   return new PromiseA(function (realResolve) {
     var app = require('../lib/app.js');
 
-    var directive = { content: content, livereload: opts.livereload
-      , sites: opts.sites
-      , expressApp: opts.expressApp };
+    var directive = {
+      content: content
+    , livereload: opts.livereload
+    , sites: opts.sites
+    , expressApp: opts.expressApp
+    };
     var insecureServer;
 
     function resolve() {
