@@ -85,7 +85,8 @@ function createServer(port, _delete_me_, content, opts) {
     // ddns.token(params.email, domains[0])
     params.email = opts.email;
     params.refreshToken = opts.refreshToken;
-    params.challengeType = 'dns-01';
+    params.challengeType = 'http-01';
+    //params.challengeType = 'dns-01';
     params.cli = opts.argv;
 
     cb(null, { options: params, certs: certs });
@@ -125,7 +126,7 @@ function createServer(port, _delete_me_, content, opts) {
       , 'tls-sni-01': leChallengeFs // leChallengeSni
       , 'dns-01': leChallengeDdns
       }
-    , challengeType: (opts.tunnel ? 'http-01' : 'dns-01')
+    , challengeType: 'http-01' //(opts.tunnel ? 'http-01' : 'dns-01')
     , store: require('le-store-certbot').create({
         webrootPath: webrootPath
       , configDir: path.join((opts.homedir || '~'), 'letsencrypt', 'etc')
@@ -222,18 +223,20 @@ function createServer(port, _delete_me_, content, opts) {
     }
 
     server.on('request', function (req, res) {
-      console.log('[' + req.method + '] ' + req.url);
+      console.log('onRequest [' + req.method + '] ' + req.url);
       if (!req.socket.encrypted && !/\/\.well-known\/acme-challenge\//.test(req.url)) {
         opts.redirectApp(req, res);
         return;
       }
 
-      if ('function' === typeof app) {
-        app(req, res);
-        return;
-      }
+      lex.middleware(function (req, res) {
+        if ('function' === typeof app) {
+          app(req, res);
+          return;
+        }
 
-      res.end('not ready');
+        res.end('not ready');
+      })(req, res);
     });
 
     return PromiseA.resolve(app).then(function (_app) {
