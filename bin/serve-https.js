@@ -85,7 +85,7 @@ function createServer(port, _delete_me_, content, opts) {
     // ddns.token(params.email, domains[0])
     params.email = opts.email;
     params.refreshToken = opts.refreshToken;
-    params.challengeType = 'http-01';
+    //params.challengeType = 'http-01';
     //params.challengeType = 'dns-01';
     params.cli = opts.argv;
 
@@ -117,7 +117,7 @@ function createServer(port, _delete_me_, content, opts) {
     var leChallengeDdns = require('le-challenge-ddns').create({ ttl: 1 });
     var lex = require('greenlock-express').create({
       // set to https://acme-v01.api.letsencrypt.org/directory in production
-      server: opts.debug ? 'staging' : 'https://acme-v01.api.letsencrypt.org/directory'
+      server: opts.test ? 'staging' : 'https://acme-v01.api.letsencrypt.org/directory'
 
     // If you wish to replace the default plugins, you may do so here
     //
@@ -126,7 +126,9 @@ function createServer(port, _delete_me_, content, opts) {
       , 'tls-sni-01': leChallengeFs // leChallengeSni
       , 'dns-01': leChallengeDdns
       }
-    , challengeType: 'http-01' //(opts.tunnel ? 'http-01' : 'dns-01')
+    , challengeType: opts.challengeType || (opts.tunnel ? 'http-01' : 'dns-01')
+    //, challengeType: 'http-01'
+    //, challengeType: 'dns-01'
     , store: require('le-store-certbot').create({
         webrootPath: webrootPath
       , configDir: path.join((opts.homedir || '~'), 'letsencrypt', 'etc')
@@ -275,7 +277,9 @@ function run() {
 
   var opts = {
     agreeTos: argv.agreeTos || argv['agree-tos']
+  , challengeType: argv['challenge-type']
   , debug: argv.debug
+  , test: argv.debug || argv.test || argv['dry-run'] || argv.dryrun
   , device: argv.device
   , provider: (argv.provider && 'false' !== argv.provider) ? argv.provider : 'oauth3.org'
   , email: argv.email
