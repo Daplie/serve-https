@@ -42,13 +42,13 @@
     "daplie-tunnel": "git+https://git.daplie.com/Daplie/daplie-cli-tunnel.git#master",
     "ddns-cli": "git+https://git.daplie.com/Daplie/node-ddns-client.git#master",
     "finalhandler": "^0.4.0",
+    "greenlock": "git+https://git.daplie.com/Daplie/node-greenlock.git#master",
+    "greenlock-express": "git+https://git.daplie.com/Daplie/greenlock-express.git#master",
     "httpolyglot": "^0.1.1",
     "ipify": "^1.1.0",
     "le-challenge-ddns": "git+https://git.daplie.com/Daplie/le-challenge-ddns.git#master",
     "le-challenge-fs": "git+https://git.daplie.com/Daplie/le-challenge-webroot.git#master",
     "le-challenge-sni": "^2.0.1",
-    "greenlock-express": "git+https://git.daplie.com/Daplie/greenlock-express.git#master",
-    "greenlock": "git+https://git.daplie.com/Daplie/node-greenlock.git#master",
     "livereload": "^0.6.0",
     "localhost.daplie.me-certificates": "^1.3.0",
     "minimist": "^1.1.1",
@@ -56,6 +56,7 @@
     "redirect-https": "^1.1.0",
     "serve-index": "^1.7.0",
     "serve-static": "^1.10.0",
+    "server-destroy": "^1.0.1",
     "stunnel": "git+https://git.daplie.com/Daplie/node-tunnel-client.git#master"
   }
 }

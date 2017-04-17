@@ -9,6 +9,7 @@ var http = require('http');
 var fs = require('fs');
 var path = require('path');
 var DDNS = require('ddns-cli');
+var enableDestroy = require('server-destroy');
 var httpPort = 80;
 var httpsPort = 443;
 var lrPort = 35729;
@@ -30,6 +31,7 @@ function showError(err, port) {
 function createInsecureServer(port, _delete_me_, opts) {
   return new PromiseA(function (realResolve) {
     var server = http.createServer();
+    enableDestroy(server);
 
     function resolve() {
       realResolve(server);
@@ -44,7 +46,7 @@ function createInsecureServer(port, _delete_me_, opts) {
 
       opts.errorInsecurePort = err.toString();
 
-      return createInsecureServer(insecurePortFallback, null, opts).then(resolve);
+      return createInsecureServer(insecurePortFallback, null, opts).then(realResolve);
     });
 
     server.on('request', opts.redirectApp);
@@ -167,6 +169,7 @@ function createServer(port, _delete_me_, content, opts) {
       lex.httpsOptions.SNICallback(sni, cb);
     };
     var server = https.createServer(opts.httpsOptions);
+    enableDestroy(server);
 
     server.on('error', function (err) {
       if (opts.errorPort || opts.manualPort) {
@@ -177,7 +180,7 @@ function createServer(port, _delete_me_, content, opts) {
 
       opts.errorPort = err.toString();
 
-      return createServer(portFallback, null, content, opts).then(resolve);
+      return createServer(portFallback, null, content, opts).then(realResolve);
     });
 
     server.listen(port, function () {
@@ -197,15 +200,15 @@ function createServer(port, _delete_me_, content, opts) {
         console.warn("WARNING: If CPU usage spikes to 100% it's because too many files are being watched");
         // TODO create map of directories to watch from opts.sites and iterate over it
         server2.watch(opts.pubdir);
+        server.on('close', function () {
+          server2.close();
+        });
       }
 
-      // if we haven't disabled insecure port
-      if ('false' !== opts.insecurePort) {
-        // and both ports are the default
-        if ((httpsPort === opts.port && httpPort === opts.insecurePort)
-          // or other case
-          || (httpPort !== opts.insecurePort && opts.port !== opts.insecurePort)
-        ) {
+      // if we haven't disabled insecure port, and the insecure and secure ports are different
+      if ('false' !== opts.insecurePort && opts.port !== opts.insecurePort) {
+        // Only fire up the insecure server if the user specified neither or both ports
+        if (opts.manualInsecurePort || !opts.manualPort) {
           return createInsecureServer(opts.insecurePort, null, opts).then(function (_server) {
             insecureServer = _server;
             resolve();
@@ -240,10 +243,6 @@ function createServer(port, _delete_me_, content, opts) {
         res.end('not ready');
       })(req, res);
     });
-
-    return PromiseA.resolve(app).then(function (_app) {
-      app = _app;
-    });
   });
 }
 
@@ -254,7 +253,6 @@ function run() {
   var minimist = require('minimist');
   var argv = minimist(process.argv.slice(2));
   var port = parseInt(argv.p || argv.port || argv._[0], 10) || httpsPort;
-  var livereload = argv.livereload;
   var defaultWebRoot = path.resolve(argv['default-web-root'] || argv.d || argv._[1] || process.cwd());
   var content = argv.c;
   var letsencryptHost = argv['letsencrypt-certs'];
@@ -395,7 +393,7 @@ function run() {
     || argv.i || argv['insecure-port']
     || httpPort
     ;
-  opts.livereload = livereload;
+  opts.livereload = argv.livereload;
 
   if (argv['express-app']) {
     opts.expressApp = require(path.resolve(process.cwd(), argv['express-app']));
@@ -525,15 +523,14 @@ function run() {
         // the signal again and exit the way it normally would.
         process.removeListener('SIGINT', sigHandler);
 
-        if (servers.server) {
-          servers.server.close();
-        }
-        if (servers.plainServer) {
-          servers.plainServer.close();
-        }
         if (servers.tunnel) {
           servers.tunnel.end();
         }
+
+        if (servers.plainServer) {
+          servers.plainServer.destroy();
+        }
+        servers.server.destroy();
       }
       process.on('SIGINT', sigHandler);
 
