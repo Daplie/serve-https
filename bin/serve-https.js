@@ -434,7 +434,6 @@ function run() {
   opts.redirectApp = require('redirect-https')(opts.redirectOptions);
 
   return createServer(port, null, content, opts).then(function (servers) {
-    var p;
     var httpsUrl;
     var httpUrl;
     var promise;
@@ -446,17 +445,15 @@ function run() {
 
     // Port
     httpsUrl = 'https://' + opts._old_server_name;
-    p = opts.port;
-    if (httpsPort !== p) {
-      httpsUrl += ':' + p;
+    if (httpsPort !== opts.port) {
+      httpsUrl += ':' + opts.port;
     }
     console.info('\t' + httpsUrl);
 
     // Insecure Port
     httpUrl = 'http://' + opts._old_server_name;
-    p = opts.insecurePort;
-    if (httpPort !== p) {
-      httpUrl += ':' + p;
+    if (httpPort !== opts.insecurePort) {
+      httpUrl += ':' + opts.insecurePort;
     }
     console.info('\t' + httpUrl + ' (redirecting to https)');
     console.info('');
@@ -513,11 +510,32 @@ function run() {
       }
 
       if (opts.tunnel) {
-        require('../lib/tunnel.js').create(opts, servers);
+        require('../lib/tunnel.js').create(opts).then(function (tunnel) {
+          servers.tunnel = tunnel;
+        });
       }
       else if (opts.ddns) {
-        require('../lib/ddns.js').create(opts, servers);
+        require('../lib/ddns.js').create(opts);
       }
+
+      function sigHandler() {
+        console.log('SIGINT');
+        // We want to handle cleanup properly unless something is broken in our cleanup process
+        // that prevents us from exitting, in which case we want the user to be able to send
+        // the signal again and exit the way it normally would.
+        process.removeListener('SIGINT', sigHandler);
+
+        if (servers.server) {
+          servers.server.close();
+        }
+        if (servers.plainServer) {
+          servers.plainServer.close();
+        }
+        if (servers.tunnel) {
+          servers.tunnel.end();
+        }
+      }
+      process.on('SIGINT', sigHandler);
 
       Object.keys(opts.ifaces).forEach(function (iname) {
         var iface = opts.ifaces[iname];
