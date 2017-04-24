@@ -6,7 +6,7 @@ var PromiseA = require('bluebird');
 var tls = require('tls');
 var https = require('httpolyglot');
 var http = require('http');
-var proxyAddr = require('proxy-addr');
+var proxyaddr = require('proxy-addr');
 var fs = require('fs');
 var path = require('path');
 var DDNS = require('ddns-cli');
@@ -70,9 +70,17 @@ function createServerHelper(port, content, opts, lex) {
       });
     }
 
+    function proxySaysSecure(req) {
+      if (!proxyaddr(req, opts.isProxyTrusted)) {
+        return false;
+      }
+
+      return 'https' === req.headers['x-forwarded-proto'];
+    }
+
     function onRequest(req, res) {
       console.log('onRequest [' + req.method + '] ' + req.url);
-      if (!req.socket.encrypted && !opts.isProxyTrusted(req) && !/\/\.well-known\/acme-challenge\//.test(req.url)) {
+      if (!req.socket.encrypted && !proxySaysSecure(req) && !/\/\.well-known\/acme-challenge\//.test(req.url)) {
         opts.redirectApp(req, res);
         return;
       }
@@ -446,7 +454,7 @@ function run() {
 
   // can be changed to tunnel external port
   opts.redirectOptions = { port: opts.port };
-  opts.isProxyTrusted = proxyAddr.compile(opts.trustProxy || []);
+  opts.isProxyTrusted = proxyaddr.compile(opts.trustProxy || []);
   opts.redirectApp = require('redirect-https')(opts.redirectOptions);
 
   return createServer(port, null, content, opts).then(function (servers) {
