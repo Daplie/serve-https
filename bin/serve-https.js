@@ -75,7 +75,24 @@ function createServerHelper(port, content, opts, lex) {
         return false;
       }
 
-      return 'https' === req.headers['x-forwarded-proto'];
+      return 'https' === req.headers['x-forwarded-proto']
+				|| -1 !== (req.headers.forwarded || '').toLowerCase().indexOf(' proto=https')
+				|| 'on' === req.headers['x-forwarded-ssl']
+      	//|| 'https' === req.headers['x-forwarded-protocol']
+				//|| 'on' === req.headers['front-end-https']
+        ;
+      /*
+				// Standard
+				Forwarded: by=<identifier>; for=<identifier>; host=<host>; proto=<http|https>
+
+				// Microsoft
+				Front-End-Https: on
+
+				// Misc
+				X-Forwarded-Protocol: https
+				X-Forwarded-Ssl: on
+				X-Url-Scheme: https
+      */
     }
 
     function onRequest(req, res) {
