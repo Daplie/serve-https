@@ -428,6 +428,7 @@ function run() {
   // can be changed to tunnel external port
   opts.redirectOptions = {
     port: opts.port
+  , trustProxy: [ 'localhost', 'linklocal', 'uniquelocal' ]
   };
   opts.redirectApp = require('redirect-https')(opts.redirectOptions);
 
