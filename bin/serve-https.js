@@ -6,6 +6,7 @@ var PromiseA = require('bluebird');
 var tls = require('tls');
 var https = require('httpolyglot');
 var http = require('http');
+var proxyAddr = require('proxy-addr');
 var fs = require('fs');
 var path = require('path');
 var DDNS = require('ddns-cli');
@@ -28,7 +29,7 @@ function showError(err, port) {
   }
 }
 
-function createInsecureServer(port, _delete_me_, opts) {
+function createInsecureServer(port, _delete_me_, opts, onRequest) {
   return new PromiseA(function (realResolve) {
     var server = http.createServer();
     enableDestroy(server);
@@ -46,15 +47,102 @@ function createInsecureServer(port, _delete_me_, opts) {
 
       opts.errorInsecurePort = err.toString();
 
-      return createInsecureServer(insecurePortFallback, null, opts).then(realResolve);
+      return createInsecureServer(insecurePortFallback, null, opts, onRequest).then(realResolve);
     });
 
-    server.on('request', opts.redirectApp);
+    server.on('request', onRequest);
 
     server.listen(port, function () {
       opts.insecurePort = port;
       resolve();
     });
+  });
+}
+
+function createServerHelper(port, content, opts, lex) {
+  var insecureServer;
+
+  return new PromiseA(function (realResolve) {
+    function resolve() {
+      realResolve({
+        plainServer: insecureServer
+      , server: server
+      });
+    }
+
+    function onRequest(req, res) {
+      console.log('onRequest [' + req.method + '] ' + req.url);
+      if (!req.socket.encrypted && !opts.isProxyTrusted(req) && !/\/\.well-known\/acme-challenge\//.test(req.url)) {
+        opts.redirectApp(req, res);
+        return;
+      }
+
+      lex.middleware(function (req, res) {
+        if ('function' === typeof opts._app) {
+          opts._app(req, res);
+          return;
+        }
+
+        res.end('app not loaded');
+      })(req, res);
+    }
+
+    function onListen() {
+      opts.port = port;
+      opts.redirectOptions.port = port;
+
+      if (opts.livereload) {
+        opts.lrPort = opts.lrPort || lrPort;
+        var livereload = require('livereload');
+        var server2 = livereload.createServer({
+          https: opts.httpsOptions
+        , port: opts.lrPort
+        , exclusions: [ 'node_modules' ]
+        });
+
+        console.info("[livereload] watching " + opts.pubdir);
+        console.warn("WARNING: If CPU usage spikes to 100% it's because too many files are being watched");
+        // TODO create map of directories to watch from opts.sites and iterate over it
+        server2.watch(opts.pubdir);
+        server.on('close', function () {
+          server2.close();
+        });
+      }
+
+      // if we haven't disabled insecure port, and the insecure and secure ports are different
+      if ('false' !== opts.insecurePort && opts.port !== opts.insecurePort) {
+        // Only fire up the insecure server if the user specified neither or both ports
+        if (opts.manualInsecurePort || !opts.manualPort) {
+          return createInsecureServer(opts.insecurePort, null, opts, onRequest).then(function (_server) {
+            insecureServer = _server;
+            resolve();
+          });
+        }
+      }
+
+      opts.insecurePort = opts.port;
+      resolve();
+      return;
+    }
+
+    function onError(err) {
+      if (opts.errorPort || opts.manualPort) {
+        showError(err, port);
+        process.exit(1);
+        return;
+      }
+
+      opts.errorPort = err.toString();
+
+      return createServerHelper(portFallback, content, opts, lex).then(realResolve);
+    }
+
+    var server = https.createServer(opts.httpsOptions);
+    enableDestroy(server);
+
+    server.on('error', onError);
+    server.listen(port, onListen);
+    server.on('request', onRequest);
   });
 }
 
@@ -94,156 +182,86 @@ function createServer(port, _delete_me_, content, opts) {
     cb(null, { options: params, certs: certs });
   }
 
-  return new PromiseA(function (realResolve) {
-    var app = require('../lib/app.js');
+  var app = require('../lib/app.js');
 
-    var directive = {
-      content: content
-    , livereload: opts.livereload
-    , sites: opts.sites
-    , expressApp: opts.expressApp
-    };
-    var insecureServer;
+  var directive = {
+    content: content
+  , livereload: opts.livereload
+  , sites: opts.sites
+  , expressApp: opts.expressApp
+  };
 
-    function resolve() {
-      realResolve({
-        plainServer: insecureServer
-      , server: server
-      });
+  // returns an instance of node-letsencrypt with additional helper methods
+  var webrootPath = require('os').tmpdir();
+  var leChallengeFs = require('le-challenge-fs').create({ webrootPath: webrootPath });
+  //var leChallengeSni = require('le-challenge-sni').create({ webrootPath: webrootPath });
+  var leChallengeDdns = require('le-challenge-ddns').create({ ttl: 1 });
+  var oldConfigDir = path.join((opts.homedir || '~'), 'letsencrypt', 'etc');
+  var defaultConfigDir = path.join((opts.homedir || '~'), 'acme', 'etc');
+  if (fs.existsSync(oldConfigDir)) {
+    defaultConfigDir = oldConfigDir;
+  }
+  opts.configDir = opts.configDir || defaultConfigDir;
+  var lex = require('greenlock-express').create({
+    // set to https://acme-v01.api.letsencrypt.org/directory in production
+    server: opts.test ? 'staging' : 'https://acme-v01.api.letsencrypt.org/directory'
+
+  // If you wish to replace the default plugins, you may do so here
+  //
+  , challenges: {
+      'http-01': leChallengeFs
+    , 'tls-sni-01': leChallengeFs // leChallengeSni
+    , 'dns-01': leChallengeDdns
     }
+  , challengeType: opts.challengeType || (opts.tunnel ? 'http-01' : 'dns-01')
+  //, challengeType: 'http-01'
+  //, challengeType: 'dns-01'
+  , store: require('le-store-certbot').create({
+      webrootPath: webrootPath
+    , configDir: opts.configDir
+    , homedir: opts.homedir
+    })
+  , webrootPath: webrootPath
 
-    // returns an instance of node-letsencrypt with additional helper methods
-    var webrootPath = require('os').tmpdir();
-    var leChallengeFs = require('le-challenge-fs').create({ webrootPath: webrootPath });
-    //var leChallengeSni = require('le-challenge-sni').create({ webrootPath: webrootPath });
-    var leChallengeDdns = require('le-challenge-ddns').create({ ttl: 1 });
-    var lex = require('greenlock-express').create({
-      // set to https://acme-v01.api.letsencrypt.org/directory in production
-      server: opts.test ? 'staging' : 'https://acme-v01.api.letsencrypt.org/directory'
+  // You probably wouldn't need to replace the default sni handler
+  // See https://git.daplie.com/Daplie/le-sni-auto if you think you do
+  //, sni: require('le-sni-auto').create({})
 
-    // If you wish to replace the default plugins, you may do so here
-    //
-    , challenges: {
-        'http-01': leChallengeFs
-      , 'tls-sni-01': leChallengeFs // leChallengeSni
-      , 'dns-01': leChallengeDdns
-      }
-    , challengeType: opts.challengeType || (opts.tunnel ? 'http-01' : 'dns-01')
-    //, challengeType: 'http-01'
-    //, challengeType: 'dns-01'
-    , store: require('le-store-certbot').create({
-        webrootPath: webrootPath
-      , configDir: path.join((opts.homedir || '~'), 'letsencrypt', 'etc')
-      , homedir: opts.homedir
-      })
-    , webrootPath: webrootPath
-
-    // You probably wouldn't need to replace the default sni handler
-    // See https://git.daplie.com/Daplie/le-sni-auto if you think you do
-    //, sni: require('le-sni-auto').create({})
-
-    , approveDomains: approveDomains
-    });
-
-    var secureContexts = {
-      'localhost.daplie.me': null
-    };
-    opts.httpsOptions.SNICallback = function (sni, cb ) {
-      var tlsOptions;
-      console.log('[https] sni', sni);
-
-      // Static Certs
-      if (/.*localhost.*\.daplie\.me/.test(sni.toLowerCase())) {
-        // TODO implement
-        if (!secureContexts[sni]) {
-          tlsOptions = require('localhost.daplie.me-certificates').mergeTlsOptions(sni, {});
-        }
-        if (tlsOptions) {
-          secureContexts[sni] = tls.createSecureContext(tlsOptions);
-        }
-        cb(null, secureContexts[sni]);
-        return;
-      }
-
-      // Dynamic Certs
-      lex.httpsOptions.SNICallback(sni, cb);
-    };
-    var server = https.createServer(opts.httpsOptions);
-    enableDestroy(server);
-
-    server.on('error', function (err) {
-      if (opts.errorPort || opts.manualPort) {
-        showError(err, port);
-        process.exit(1);
-        return;
-      }
-
-      opts.errorPort = err.toString();
-
-      return createServer(portFallback, null, content, opts).then(realResolve);
-    });
-
-    server.listen(port, function () {
-      opts.port = port;
-      opts.redirectOptions.port = port;
-
-      if (opts.livereload) {
-        opts.lrPort = opts.lrPort || lrPort;
-        var livereload = require('livereload');
-        var server2 = livereload.createServer({
-          https: opts.httpsOptions
-        , port: opts.lrPort
-        , exclusions: [ 'node_modules' ]
-        });
-
-        console.info("[livereload] watching " + opts.pubdir);
-        console.warn("WARNING: If CPU usage spikes to 100% it's because too many files are being watched");
-        // TODO create map of directories to watch from opts.sites and iterate over it
-        server2.watch(opts.pubdir);
-        server.on('close', function () {
-          server2.close();
-        });
-      }
-
-      // if we haven't disabled insecure port, and the insecure and secure ports are different
-      if ('false' !== opts.insecurePort && opts.port !== opts.insecurePort) {
-        // Only fire up the insecure server if the user specified neither or both ports
-        if (opts.manualInsecurePort || !opts.manualPort) {
-          return createInsecureServer(opts.insecurePort, null, opts).then(function (_server) {
-            insecureServer = _server;
-            resolve();
-          });
-        }
-      }
-
-      opts.insecurePort = opts.port;
-      resolve();
-      return;
-    });
-
-    if ('function' === typeof app) {
-      app = app(directive);
-    } else if ('function' === typeof app.create) {
-      app = app.create(directive);
-    }
-
-    server.on('request', function (req, res) {
-      console.log('onRequest [' + req.method + '] ' + req.url);
-      if (!req.socket.encrypted && !/\/\.well-known\/acme-challenge\//.test(req.url)) {
-        opts.redirectApp(req, res);
-        return;
-      }
-
-      lex.middleware(function (req, res) {
-        if ('function' === typeof app) {
-          app(req, res);
-          return;
-        }
-
-        res.end('not ready');
-      })(req, res);
-    });
+  , approveDomains: approveDomains
   });
+
+  var secureContexts = {
+    'localhost.daplie.me': null
+  };
+  opts.httpsOptions.SNICallback = function (sni, cb ) {
+    var tlsOptions;
+    console.log('[https] sni', sni);
+
+    // Static Certs
+    if (/.*localhost.*\.daplie\.me/.test(sni.toLowerCase())) {
+      // TODO implement
+      if (!secureContexts[sni]) {
+        tlsOptions = require('localhost.daplie.me-certificates').mergeTlsOptions(sni, {});
+      }
+      if (tlsOptions) {
+        secureContexts[sni] = tls.createSecureContext(tlsOptions);
+      }
+      cb(null, secureContexts[sni]);
+      return;
+    }
+
+    // Dynamic Certs
+    lex.httpsOptions.SNICallback(sni, cb);
+  };
+
+  if ('function' === typeof app) {
+    app = app(directive);
+  } else if ('function' === typeof app.create) {
+    app = app.create(directive);
+  }
+
+  opts._app = app;
+  return createServerHelper(port, content, opts, lex);
 }
 
 module.exports.createServer = createServer;
@@ -287,6 +305,7 @@ function run() {
     //, ca: httpsOptions.ca
     }
   , homedir: argv.homedir
+  , trustProxy: (argv['trust-proxy'] || argv['trust-proxies'] || 'loopback,linklocal,uniquelocal').split(/,/g)
   , argv: argv
   };
   var peerCa;
@@ -426,10 +445,8 @@ function run() {
   return p.then(function () {
 
   // can be changed to tunnel external port
-  opts.redirectOptions = {
-    port: opts.port
-  , trustProxy: [ 'localhost', 'linklocal', 'uniquelocal' ]
-  };
+  opts.redirectOptions = { port: opts.port };
+  opts.isProxyTrusted = proxyAddr.compile(opts.trustProxy || []);
   opts.redirectApp = require('redirect-https')(opts.redirectOptions);
 
   return createServer(port, null, content, opts).then(function (servers) {
@@ -506,6 +523,7 @@ function run() {
       else if (!opts.tunnel) {
         console.info("External IP address does not match local IP address.");
         console.info("Use --tunnel to allow the people of the Internet to access your server.");
+        console.info("(or, if you know that you're using something like caddy or nginx to reverse proxy: keep calm and proxy on)");
       }
 
       if (opts.tunnel) {
