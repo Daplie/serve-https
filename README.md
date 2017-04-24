@@ -75,6 +75,7 @@ Options:
 * `-c <content>` - i.e. `server-https -c 'Hello, World! '` (defaults to directory index)
 * `--express-app <path>` - path to a file the exports an express-style app (`function (req, res, next) { ... }`)
 * `--livereload` - inject livereload into all html pages (see also: [fswatch](http://stackoverflow.com/a/13807906/151312)), but be careful if `<dirpath>` has thousands of files it will spike your CPU usage to 100%
+* `--trust-proxy <x.x.x.x,y.y.y.y>` - by default your https redirect will be skipped if the X-Forwarded-Proto or Forwarded headers are specified by loopback, linklocal, or uniquelocal addresses (i.e. 127.0.0.1, 192.168.x.x, 169.x.x.x). You can override that here.
 
 * `--email <email>` - email to use for Let's Encrypt, Daplie DNS, Daplie Tunnel
 * `--agree-tos` - agree to terms for Let's Encrypt, Daplie DNS
