@@ -263,7 +263,7 @@ function createServer(port, _delete_me_, content, opts) {
     console.log('[https] sni', sni);
 
     // Static Certs
-    if (/.*localhost.*\.daplie\.me/.test(sni.toLowerCase())) {
+    if (!opts.fooRenew && /.*localhost.*\.daplie\.me/.test(sni.toLowerCase())) {
       // TODO implement
       if (!secureContexts[sni]) {
         tlsOptions = require('localhost.daplie.me-certificates').mergeTlsOptions(sni, {});
@@ -319,6 +319,7 @@ function run() {
   var opts = {
     agreeTos: argv.agreeTos || argv['agree-tos']
   , challengeType: argv['challenge-type']
+  , fooRenew: argv['foo-renew']
   , debug: argv.debug
   , test: argv.debug || argv.test || argv['dry-run'] || argv.dryrun
   , device: argv.device
