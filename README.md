@@ -1,4 +1,3 @@
-===========
 
 A simple HTTPS static file server with valid TLS (SSL) certs.
 
@@ -135,7 +134,8 @@ sudo serve-https -p 8443 \
   -c "$(cat 'sudo /etc/letsencrypt/live/test.mooo.com/root.pem')"
 ```
 
-and can be tested like so
-=======
+and can be tested like so: 
+
+```
 serve-https
-=====
+```
