@@ -1,19 +1,3 @@
-<!-- BANNER_TPL_BEGIN -->
-
-About Daplie: We're taking back the Internet!
---------------
-
-Down with Google, Apple, and Facebook!
-
-We're re-decentralizing the web and making it read-write again - one home cloud system at a time.
-
-Tired of serving the Empire? Come join the Rebel Alliance:
-
-<a href="mailto:jobs@daplie.com">jobs@daplie.com</a> | [Invest in Daplie on Wefunder](https://daplie.com/invest/) | [Pre-order Cloud](https://daplie.com/preorder/), The World's First Home Server for Everyone
-
-<!-- BANNER_TPL_END -->
-
-serve-https
 ===========
 
 A simple HTTPS static file server with valid TLS (SSL) certs.
@@ -152,11 +136,6 @@ sudo serve-https -p 8443 \
 ```
 
 and can be tested like so
-
-```bash
-curl --insecure https://test.mooo.com:8443 > ./root.pem
-curl https://test.mooo.com:8843 --cacert ./root.pem
-```
-
-* [QuickStart Guide for Let's Encrypt](https://coolaj86.com/articles/lets-encrypt-on-raspberry-pi/)
-* [QuickStart Guide for FreeDNS](https://coolaj86.com/articles/free-dns-hosting-with-freedns-afraid-org.html)
+=======
+serve-https
+=====
